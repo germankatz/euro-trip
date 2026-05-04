@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import type { CityModel } from "@/generated/prisma/models";
+import type {
+  CityModel,
+  TransportModel,
+  ActivityModel,
+} from "@/generated/prisma/models";
 
 export type TripContext = {
   trip: { id: string; name: string };
@@ -109,5 +113,150 @@ export async function getVisibleCities(opts: {
     },
     orderBy: { order: "asc" },
     select,
+  });
+}
+
+// =====================================================================
+//  TRANSPORTS & ACTIVITIES
+// =====================================================================
+
+export type VisibleTransport = Pick<
+  TransportModel,
+  | "id"
+  | "fromName"
+  | "fromLat"
+  | "fromLng"
+  | "toName"
+  | "toLat"
+  | "toLng"
+  | "fromCityId"
+  | "toCityId"
+  | "mode"
+  | "company"
+  | "departureAt"
+  | "arrivalAt"
+  | "notesMd"
+  | "imageUrls"
+  | "createdById"
+  | "createdAt"
+  | "archivedAt"
+>;
+
+export type VisibleActivity = Pick<
+  ActivityModel,
+  | "id"
+  | "cityId"
+  | "title"
+  | "mapsUrl"
+  | "notesMd"
+  | "imageUrls"
+  | "createdById"
+  | "createdAt"
+  | "archivedAt"
+>;
+
+const transportSelect = {
+  id: true,
+  fromName: true,
+  fromLat: true,
+  fromLng: true,
+  toName: true,
+  toLat: true,
+  toLng: true,
+  fromCityId: true,
+  toCityId: true,
+  mode: true,
+  company: true,
+  departureAt: true,
+  arrivalAt: true,
+  notesMd: true,
+  imageUrls: true,
+  createdById: true,
+  createdAt: true,
+  archivedAt: true,
+} as const;
+
+const activitySelect = {
+  id: true,
+  cityId: true,
+  title: true,
+  mapsUrl: true,
+  notesMd: true,
+  imageUrls: true,
+  createdById: true,
+  createdAt: true,
+  archivedAt: true,
+} as const;
+
+/**
+ * Transports visibles para el user. Heredan visibility de las cities que
+ * conectan: si toca una city `group`, solo la ven los CityMembers.
+ *
+ * Implementación: filtramos por OR de los siguientes:
+ *   1. fromCityId y toCityId son null (transporte "free", visible a todos)
+ *   2. ambas cities son shared o están en visibleCityIds
+ *   3. una de las cities es null y la otra es visible
+ * Lo más simple: pedirle a Prisma que solo traiga transports cuyas FKs
+ * (las no-null) estén en el set de cities visibles.
+ */
+export async function getVisibleTransports(opts: {
+  tripId: string;
+  visibleCityIds: string[];
+  isSeed: boolean;
+  includeArchived?: boolean;
+}): Promise<VisibleTransport[]> {
+  const { visibleCityIds, isSeed, includeArchived } = opts;
+  const baseWhere = includeArchived
+    ? { tripId: opts.tripId }
+    : { tripId: opts.tripId, archivedAt: null };
+
+  if (isSeed) {
+    return prisma.transport.findMany({
+      where: baseWhere,
+      orderBy: { departureAt: "asc" },
+      select: transportSelect,
+    });
+  }
+
+  // Para non-seed: cada FK debe ser null o estar en visibleCityIds.
+  // Equivale a: NOT EXISTS un FK que apunte a una city NO visible.
+  return prisma.transport.findMany({
+    where: {
+      ...baseWhere,
+      AND: [
+        {
+          OR: [
+            { fromCityId: null },
+            { fromCityId: { in: visibleCityIds } },
+          ],
+        },
+        {
+          OR: [
+            { toCityId: null },
+            { toCityId: { in: visibleCityIds } },
+          ],
+        },
+      ],
+    },
+    orderBy: { departureAt: "asc" },
+    select: transportSelect,
+  });
+}
+
+/**
+ * Activities visibles para el user: las que pertenecen a una city visible.
+ * (Fácil porque cada activity tiene exactamente una city.)
+ */
+export async function getVisibleActivities(opts: {
+  visibleCityIds: string[];
+  includeArchived?: boolean;
+}): Promise<VisibleActivity[]> {
+  return prisma.activity.findMany({
+    where: {
+      cityId: { in: opts.visibleCityIds },
+      ...(opts.includeArchived ? {} : { archivedAt: null }),
+    },
+    orderBy: { createdAt: "asc" },
+    select: activitySelect,
   });
 }

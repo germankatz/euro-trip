@@ -4,6 +4,8 @@ import {
   getTripContext,
   getVisibleCities,
   getTripMembers,
+  getVisibleTransports,
+  getVisibleActivities,
 } from "@/lib/trip";
 import { AppShell } from "@/components/app-shell/AppShell";
 
@@ -29,6 +31,8 @@ export default async function Home() {
     );
   }
 
+  // El AppShell también necesita ver items archivados (en la sección
+  // "Archivado" del detalle), por eso pedimos includeArchived.
   const [cities, allMembers] = await Promise.all([
     getVisibleCities({
       tripId: ctx.trip.id,
@@ -38,12 +42,28 @@ export default async function Home() {
     getTripMembers(ctx.trip.id),
   ]);
 
+  const visibleCityIds = cities.map((c) => c.id);
+  const [transports, activities] = await Promise.all([
+    getVisibleTransports({
+      tripId: ctx.trip.id,
+      visibleCityIds,
+      isSeed: ctx.isSeed,
+      includeArchived: true,
+    }),
+    getVisibleActivities({
+      visibleCityIds,
+      includeArchived: true,
+    }),
+  ]);
+
   const otherTripMembers = allMembers.filter((m) => m.userId !== session.user.id);
 
   return (
     <AppShell
       trip={ctx.trip}
       cities={cities}
+      transports={transports}
+      activities={activities}
       user={{
         id: session.user.id,
         name: session.user.name,
