@@ -22,6 +22,15 @@ export type ActionResult =
   | { ok: true }
   | { ok: false; error: string };
 
+// Solo aceptamos rutas internas (que empiezan con `/` y no `//` ni `/\\`)
+// para evitar open redirects a hosts externos.
+function safeCallbackUrl(raw: FormDataEntryValue | null): string {
+  if (typeof raw !== "string") return "/";
+  if (!raw.startsWith("/")) return "/";
+  if (raw.startsWith("//") || raw.startsWith("/\\")) return "/";
+  return raw;
+}
+
 export async function loginAction(formData: FormData): Promise<ActionResult> {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
@@ -30,6 +39,8 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: "Email o password inválidos." };
   }
+
+  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
 
   try {
     await signIn("credentials", {
@@ -44,7 +55,7 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
     throw err;
   }
 
-  redirect("/");
+  redirect(callbackUrl);
 }
 
 export async function registerAction(formData: FormData): Promise<ActionResult> {
@@ -74,6 +85,8 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
     },
   });
 
+  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
+
   // Auto-login post-registro.
   try {
     await signIn("credentials", {
@@ -88,7 +101,7 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
     throw err;
   }
 
-  redirect("/");
+  redirect(callbackUrl);
 }
 
 export async function logoutAction() {

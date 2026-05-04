@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EditCityDialog } from "@/components/cities/EditCityDialog";
+import { ShareCityButton } from "@/components/cities/ShareCityButton";
 import {
   archiveCityAction,
   unarchiveCityAction,
@@ -32,6 +33,7 @@ type CityForActions = {
   countryCode: string | null;
   createdById: string;
   archivedAt: Date | null;
+  visibility: "shared" | "group";
 };
 
 type Props = {
@@ -49,8 +51,20 @@ export function CityActions({ actor, city, onAfterMutation }: Props) {
   const showArchive = canArchive(actor, city);
   const showUnarchive = canUnarchive(actor, city);
   const showDelete = canDelete(actor);
+  const showShare =
+    city.visibility === "group" &&
+    !city.archivedAt &&
+    (actor.role === "seed" || actor.isTripMember);
 
-  if (!showEdit && !showArchive && !showUnarchive && !showDelete) return null;
+  if (
+    !showEdit &&
+    !showArchive &&
+    !showUnarchive &&
+    !showDelete &&
+    !showShare
+  ) {
+    return null;
+  }
 
   return (
     <>
@@ -65,6 +79,7 @@ export function CityActions({ actor, city, onAfterMutation }: Props) {
             <Pencil className="h-4 w-4" /> Editar
           </Button>
         )}
+        {showShare && <ShareCityButton city={city} />}
         {showArchive && (
           <Button
             type="button"
