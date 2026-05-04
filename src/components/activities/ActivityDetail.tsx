@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ActivityActions } from "@/components/activities/ActivityActions";
+import { ImageGallery } from "@/components/forms/ImageGallery";
 import type { Actor } from "@/lib/permissions";
 import type { VisibleActivity, VisibleCity } from "@/lib/trip";
 
@@ -63,6 +64,13 @@ export function ActivityDetail({
           </a>
         )}
       </div>
+
+      {activity.imageUrls.length > 0 && (
+        <section className="space-y-1.5">
+          <h3 className="text-sm font-semibold text-zinc-700">Imágenes</h3>
+          <ImageGallery urls={activity.imageUrls} />
+        </section>
+      )}
 
       {activity.notesMd.trim().length > 0 && (
         <section className="space-y-1.5">

@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ImageGallery } from "@/components/forms/ImageGallery";
 import type { Actor } from "@/lib/permissions";
 import type { VisibleCity, VisibleTransport } from "@/lib/trip";
 import { TransportActions } from "./TransportActions";
@@ -102,6 +103,13 @@ export function TransportDetail({
         <dt className="text-zinc-500">Duración</dt>
         <dd>{formatDuration(transport.departureAt, transport.arrivalAt)}</dd>
       </dl>
+
+      {transport.imageUrls.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold">Imágenes</h3>
+          <ImageGallery urls={transport.imageUrls} />
+        </div>
+      )}
 
       {transport.notesMd.trim() !== "" && (
         <div className="space-y-2">

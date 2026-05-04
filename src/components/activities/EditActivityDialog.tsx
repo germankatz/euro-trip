@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MarkdownInput } from "@/components/forms/MarkdownInput";
+import { ImageUploader } from "@/components/forms/ImageUploader";
 import { updateActivityAction } from "@/lib/actions/activities";
 import type { VisibleActivity } from "@/lib/trip";
 
@@ -24,6 +26,9 @@ export function EditActivityDialog({ open, onOpenChange, activity }: Props) {
   const [title, setTitle] = useState(activity.title);
   const [mapsUrl, setMapsUrl] = useState(activity.mapsUrl ?? "");
   const [notesMd, setNotesMd] = useState(activity.notesMd);
+  const [imageUrls, setImageUrls] = useState<string[]>(
+    activity.imageUrls ?? []
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -36,6 +41,7 @@ export function EditActivityDialog({ open, onOpenChange, activity }: Props) {
         title: title.trim(),
         mapsUrl: mapsUrl.trim() || undefined,
         notesMd,
+        imageUrls,
       });
       if (!result.ok) {
         setError(result.error);
@@ -75,14 +81,15 @@ export function EditActivityDialog({ open, onOpenChange, activity }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="activity-notes">Notas (markdown)</Label>
-            <textarea
-              id="activity-notes"
+            <MarkdownInput
               value={notesMd}
-              onChange={(e) => setNotesMd(e.target.value)}
-              maxLength={20000}
-              rows={6}
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 font-mono text-xs text-zinc-900 outline-none focus:border-zinc-400"
+              onChange={setNotesMd}
+              height={220}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Imágenes</Label>
+            <ImageUploader value={imageUrls} onChange={setImageUrls} />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <DialogFooter>

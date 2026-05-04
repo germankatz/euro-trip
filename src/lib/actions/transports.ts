@@ -51,6 +51,7 @@ const baseTransportSchema = z.object({
   departureAt: z.coerce.date(),
   arrivalAt: z.coerce.date(),
   notesMd: z.string().max(20000).default(""),
+  imageUrls: z.array(z.string()).default([]),
 });
 
 const createSchema = baseTransportSchema.extend({
@@ -220,6 +221,7 @@ export async function createTransportAction(
         departureAt: input.departureAt,
         arrivalAt: input.arrivalAt,
         notesMd: input.notesMd,
+        imageUrls: input.imageUrls,
         createdById: ctx.actor.userId,
       },
       select: { id: true },
@@ -296,6 +298,7 @@ export async function updateTransportAction(
       departureAt: input.departureAt,
       arrivalAt: input.arrivalAt,
       notesMd: input.notesMd,
+      imageUrls: input.imageUrls,
     },
   });
   revalidatePath("/");

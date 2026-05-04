@@ -27,6 +27,7 @@ const createSchema = z.object({
     .optional()
     .or(z.literal("").transform(() => undefined)),
   notesMd: z.string().max(20000).default(""),
+  imageUrls: z.array(z.string()).default([]),
 });
 
 const updateSchema = createSchema.extend({
@@ -82,6 +83,7 @@ export async function createActivityAction(
       title: parsed.data.title,
       mapsUrl: parsed.data.mapsUrl,
       notesMd: parsed.data.notesMd,
+      imageUrls: parsed.data.imageUrls,
       createdById: actor.userId,
     },
     select: { id: true },
@@ -119,6 +121,7 @@ export async function updateActivityAction(
       title: parsed.data.title,
       mapsUrl: parsed.data.mapsUrl,
       notesMd: parsed.data.notesMd,
+      imageUrls: parsed.data.imageUrls,
     },
   });
   revalidatePath("/");

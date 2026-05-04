@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CitySearchInput } from "@/components/forms/CitySearchInput";
+import { MarkdownInput } from "@/components/forms/MarkdownInput";
+import { ImageUploader } from "@/components/forms/ImageUploader";
 import { createTransportAction } from "@/lib/actions/transports";
 import { findClosestCity } from "@/lib/cityMatch";
 import type { GeoResult } from "@/lib/geocode";
@@ -105,6 +107,7 @@ function Form({
   const [departureAt, setDepartureAt] = useState("");
   const [arrivalAt, setArrivalAt] = useState("");
   const [notesMd, setNotesMd] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [fromQuickAdd, setFromQuickAdd] = useState<QuickAddCfg>(DEFAULT_QUICK_ADD);
   const [toQuickAdd, setToQuickAdd] = useState<QuickAddCfg>(DEFAULT_QUICK_ADD);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +189,7 @@ function Form({
         departureAt: dep.toISOString(),
         arrivalAt: arr.toISOString(),
         notesMd,
+        imageUrls,
         fromQuickAdd: fromQA,
         toQuickAdd: toQA,
       });
@@ -288,14 +292,17 @@ function Form({
 
       <div className="space-y-1.5">
         <Label htmlFor="ct-notes">Notas</Label>
-        <textarea
-          id="ct-notes"
+        <MarkdownInput
           value={notesMd}
-          onChange={(e) => setNotesMd(e.target.value)}
-          rows={4}
-          className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 font-mono text-xs"
+          onChange={setNotesMd}
           placeholder="Markdown soportado"
+          height={200}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Imágenes</Label>
+        <ImageUploader value={imageUrls} onChange={setImageUrls} />
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

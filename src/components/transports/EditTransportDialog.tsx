@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CitySearchInput } from "@/components/forms/CitySearchInput";
+import { MarkdownInput } from "@/components/forms/MarkdownInput";
+import { ImageUploader } from "@/components/forms/ImageUploader";
 import { updateTransportAction } from "@/lib/actions/transports";
 import type { GeoResult } from "@/lib/geocode";
 import type { VisibleTransport } from "@/lib/trip";
@@ -50,6 +52,9 @@ export function EditTransportDialog({ open, onOpenChange, transport }: Props) {
   const [departureAt, setDepartureAt] = useState(toLocalInput(transport.departureAt));
   const [arrivalAt, setArrivalAt] = useState(toLocalInput(transport.arrivalAt));
   const [notesMd, setNotesMd] = useState(transport.notesMd ?? "");
+  const [imageUrls, setImageUrls] = useState<string[]>(
+    transport.imageUrls ?? []
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -86,6 +91,7 @@ export function EditTransportDialog({ open, onOpenChange, transport }: Props) {
         departureAt: dep.toISOString(),
         arrivalAt: arr.toISOString(),
         notesMd,
+        imageUrls,
       });
       if (!result.ok) {
         setError(result.error);
@@ -161,14 +167,16 @@ export function EditTransportDialog({ open, onOpenChange, transport }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="t-notes">Notas</Label>
-            <textarea
-              id="t-notes"
+            <MarkdownInput
               value={notesMd}
-              onChange={(e) => setNotesMd(e.target.value)}
-              rows={5}
-              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 font-mono text-xs"
+              onChange={setNotesMd}
               placeholder="Markdown soportado"
+              height={220}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Imágenes</Label>
+            <ImageUploader value={imageUrls} onChange={setImageUrls} />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <DialogFooter>
