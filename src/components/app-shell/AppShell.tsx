@@ -305,6 +305,7 @@ function SheetContent(props: SheetContentProps) {
         selectedCityId={selectedCity?.id ?? null}
         onSelectCity={onSelectCity}
         grouped={state !== "peek"}
+        reorderable={actor.role === "seed" && state !== "peek"}
       />
       {state === "full" && (
         <div className="px-4 pt-2 text-xs text-zinc-500">

@@ -269,6 +269,88 @@ export async function deleteCityAction(cityId: string): Promise<ActionResult> {
   return { ok: true, data: undefined };
 }
 
+const reorderSchema = z.object({
+  orderedCityIds: z.array(z.string().min(1)).min(1),
+});
+
+/**
+ * Reordena el bloque de cities `shared` (solo seed). Recibe el array de
+ * ids en el orden deseado.
+ *
+ * Mantiene el invariant: los group "before" siguen con order < min(shared),
+ * los "after" con order > max(shared). El bloque shared sigue siendo
+ * contiguo y conserva los mismos endpoints (min y max) que tenía antes,
+ * solo cambia el orden interno.
+ *
+ * Implementación: la unique constraint (tripId, order) impide cambios
+ * naive. Movemos primero todos los shared a un rango temporal negativo
+ * que no choca con nada (offset arbitrario alto), después asignamos los
+ * orders finales según el array recibido.
+ */
+export async function reorderSharedCitiesAction(
+  rawInput: unknown
+): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor || actor.role !== "seed") {
+    return { ok: false, error: "Solo el seed puede reordenar el viaje principal." };
+  }
+
+  const parsed = reorderSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { ok: false, error: "Datos inválidos." };
+  }
+  const { orderedCityIds } = parsed.data;
+
+  const trip = await prisma.trip.findFirst({
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (!trip) return { ok: false, error: "Trip no encontrado." };
+
+  const sharedRows = await prisma.city.findMany({
+    where: { tripId: trip.id, visibility: "shared", archivedAt: null },
+    select: { id: true, order: true },
+    orderBy: { order: "asc" },
+  });
+
+  if (sharedRows.length !== orderedCityIds.length) {
+    return {
+      ok: false,
+      error: "La lista no coincide con las ciudades shared actuales.",
+    };
+  }
+  const validIds = new Set(sharedRows.map((c) => c.id));
+  for (const id of orderedCityIds) {
+    if (!validIds.has(id)) {
+      return { ok: false, error: "Hay ids que no son shared en este trip." };
+    }
+  }
+
+  const orders = sharedRows.map((c) => c.order).sort((a, b) => a - b);
+
+  await prisma.$transaction(async (tx) => {
+    // Paso 1: mover cada shared a un order temporal negativo único.
+    // Restamos 1_000_000 para garantizar que no choca con orders existentes
+    // (group cities pueden ser negativas pero nunca tan negativas).
+    for (const c of sharedRows) {
+      await tx.city.update({
+        where: { id: c.id },
+        data: { order: -1_000_000 - c.order },
+      });
+    }
+    // Paso 2: asignar los orders finales en el orden recibido.
+    for (let i = 0; i < orderedCityIds.length; i++) {
+      await tx.city.update({
+        where: { id: orderedCityIds[i] },
+        data: { order: orders[i] },
+      });
+    }
+  });
+
+  revalidatePath("/");
+  return { ok: true, data: undefined };
+}
+
 /** Devuelve cuántos hijos se verán afectados al archivar/eliminar una city. */
 export async function countCityCascade(
   cityId: string
