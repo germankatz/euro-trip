@@ -4,7 +4,7 @@
 
 Webapp de itinerario colaborativo: hay un "tronco" compartido de ciudades que ve todo el grupo, y los subgrupos pueden agregar tramos propios antes o después del tronco (ej. "yo me quedo dos días más en Berlín"). Es single-tenant: cada instancia maneja un único Trip global. Pensado para ~300 visitas/mes, sin pretensión de escalar.
 
-Stack: Next.js 16 (App Router) + React 19 + TypeScript, Postgres 16 con Prisma 7 (driver adapter `@prisma/adapter-pg`), Auth.js v5 (Credentials + bcrypt, JWT sessions), MapLibre GL JS con tiles de OpenFreeMap y geocoding via Nominatim (proxy server-side), Tailwind v4 + shadcn/ui (base-ui por debajo), framer-motion, `@uiw/react-md-editor`, react-hook-form + zod. Uploads locales en `/data/uploads` (volume Docker, `./uploads` en dev). Deploy con Docker + docker-compose, target Dokploy en VPS.
+Stack: Next.js 16 (App Router) + React 19 + TypeScript, Postgres 16 con Prisma 7 (driver adapter `@prisma/adapter-pg`), Auth.js v5 (Credentials + bcrypt, JWT sessions), Mapbox GL JS para el mapa y geocoding via Nominatim (proxy server-side), Tailwind v4 + shadcn/ui (base-ui por debajo), framer-motion, `@uiw/react-md-editor`, react-hook-form + zod. Uploads locales en `/data/uploads` (volume Docker, `./uploads` en dev). Deploy con Docker + docker-compose, target Dokploy en VPS.
 
 ## Setup local
 
@@ -46,6 +46,7 @@ Todas viven en `.env` (gitignoreado). El template canónico es `.env.example`.
 | `SEED_USER_PASSWORD` | Password en plano del seed user. Se hashea con bcrypt al guardarse. | `changeme` | sí (para seed) | Cambialo en prod antes del primer seed. |
 | `SEED_TRIP_NAME` | Nombre del Trip único que se crea si no existe. | `Mi viaje` | no (default `Mi viaje`) | Solo se usa la primera vez. |
 | `UPLOAD_DIR` | Path donde se escriben las imágenes uploadeadas. | `./uploads` (dev) / `/data/uploads` (Docker) | sí | En el container es el mountpoint del volume `uploads_data`. En dev local apuntá a un dir relativo. |
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | Token público de Mapbox GL JS. Expuesto al cliente. | `pk.eyJ1...` | sí | Conseguilo en https://account.mapbox.com/access-tokens/. Tier gratis: 50k loads/mes. Sin token la app muestra un placeholder en lugar del mapa. |
 
 ## Seed script
 
@@ -165,7 +166,7 @@ Esta versión tiene completados:
 - Docker / docker-compose listo para Dokploy.
 
 Falta (en algún orden razonable, ver el spec original para detalle):
-- Mapa fullscreen con MapLibre + tiles de OpenFreeMap.
+- Mapa fullscreen con Mapbox GL JS (necesita `NEXT_PUBLIC_MAPBOX_TOKEN`).
 - Bottom card draggable (framer-motion).
 - CRUD de cities, transports, activities.
 - Sistema de invitations.
