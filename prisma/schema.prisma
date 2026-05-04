@@ -1,0 +1,243 @@
+// Travel itinerary webapp — Prisma schema
+//
+// Diseño single-tenant (un Trip global) pero los modelos llevan tripId
+// para preparar multi-trip a futuro sin migración disruptiva.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================================
+//  USERS & AUTH
+// =====================================================================
+
+enum UserRole {
+  seed
+  member
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole @default(member)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tripMemberships     TripMember[]
+  cityMemberships     CityMember[]
+  citiesCreated       City[]       @relation("CityCreatedBy")
+  citiesArchived      City[]       @relation("CityArchivedBy")
+  transportsCreated   Transport[]  @relation("TransportCreatedBy")
+  transportsArchived  Transport[]  @relation("TransportArchivedBy")
+  activitiesCreated   Activity[]   @relation("ActivityCreatedBy")
+  activitiesArchived  Activity[]   @relation("ActivityArchivedBy")
+  invitationsSent     Invitation[] @relation("InvitedBy")
+  invitationsAccepted Invitation[] @relation("AcceptedBy")
+}
+
+// =====================================================================
+//  TRIP
+// =====================================================================
+
+model Trip {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members     TripMember[]
+  cities      City[]
+  transports  Transport[]
+  invitations Invitation[]
+}
+
+// Membresía a nivel trip. Un usuario sin TripMember solo ve el bloque shared
+// del trip en modo lectura (no puede crear/editar nada ni recibir invitaciones
+// a cities group). El seed se autoincluye al inicializar.
+model TripMember {
+  id       String   @id @default(cuid())
+  tripId   String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@index([userId])
+}
+
+// =====================================================================
+//  CITY
+// =====================================================================
+
+enum CityVisibility {
+  shared // tronco del viaje, visible por todos los TripMembers
+  group  // solo visible para los CityMember
+}
+
+model City {
+  id          String         @id @default(cuid())
+  tripId      String
+  name        String
+  lat         Float
+  lng         Float
+  countryCode String? // ISO 3166-1 alpha-2 para mostrar bandera
+  visibility  CityVisibility
+  // order es global dentro del trip. Las cities `shared` ocupan un bloque
+  // central contiguo; las `group` van antes o después, nunca intercaladas.
+  // La UI/server actions deben validar esa invariante al crear/mover.
+  order       Int
+
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+  archivedById String?
+
+  trip       Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy  User         @relation("CityCreatedBy", fields: [createdById], references: [id])
+  archivedBy User?        @relation("CityArchivedBy", fields: [archivedById], references: [id])
+  members    CityMember[]
+  activities Activity[]
+
+  // Transports linkeados (auto por proximidad < 50km al guardar)
+  transportsArriving  Transport[]  @relation("TransportToCity")
+  transportsDeparting Transport[]  @relation("TransportFromCity")
+  invitations         Invitation[]
+
+  @@unique([tripId, order])
+  @@index([tripId, archivedAt])
+}
+
+// Solo aplica si City.visibility = group. El creador queda como member auto.
+model CityMember {
+  id       String   @id @default(cuid())
+  cityId   String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, userId])
+  @@index([userId])
+}
+
+// =====================================================================
+//  TRANSPORT
+// =====================================================================
+
+enum TransportMode {
+  plane
+  bus
+  train
+  car
+  ferry
+  other
+}
+
+model Transport {
+  id     String @id @default(cuid())
+  tripId String
+
+  // Origen y destino se eligen siempre desde el autocomplete (Nominatim).
+  // Guardamos texto + coords resueltas, y opcionalmente el FK a la City del
+  // trip si hay match por proximidad (< 50km, más cercana gana).
+  fromName String
+  fromLat  Float
+  fromLng  Float
+  toName   String
+  toLat    Float
+  toLng    Float
+
+  fromCityId String?
+  toCityId   String?
+
+  mode        TransportMode
+  company     String?
+  departureAt DateTime
+  arrivalAt   DateTime
+  notesMd     String        @default("")
+  imageUrls   String[]      @default([])
+
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+  archivedById String?
+
+  trip       Trip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fromCity   City? @relation("TransportFromCity", fields: [fromCityId], references: [id], onDelete: SetNull)
+  toCity     City? @relation("TransportToCity", fields: [toCityId], references: [id], onDelete: SetNull)
+  createdBy  User  @relation("TransportCreatedBy", fields: [createdById], references: [id])
+  archivedBy User? @relation("TransportArchivedBy", fields: [archivedById], references: [id])
+
+  @@index([tripId, departureAt])
+  @@index([fromCityId])
+  @@index([toCityId])
+  @@index([tripId, archivedAt])
+}
+
+// =====================================================================
+//  ACTIVITY
+// =====================================================================
+
+model Activity {
+  id        String   @id @default(cuid())
+  cityId    String
+  title     String
+  mapsUrl   String?
+  notesMd   String   @default("")
+  imageUrls String[] @default([])
+
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+  archivedById String?
+
+  city       City  @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdBy  User  @relation("ActivityCreatedBy", fields: [createdById], references: [id])
+  archivedBy User? @relation("ActivityArchivedBy", fields: [archivedById], references: [id])
+
+  @@index([cityId, archivedAt])
+}
+
+// =====================================================================
+//  INVITATION
+// =====================================================================
+
+// Modelo (a) confirmado con el user: link tokenizado, cualquiera con el link
+// puede unirse después de registrarse/loguearse. Cuando se acepta se crea
+// el CityMember (y, si corresponde, el TripMember).
+//
+// Si cityId es null, la invitación es a nivel trip (solo el seed las emite
+// para habilitar el bloque shared en escritura; los miembros invitan a
+// cities group).
+model Invitation {
+  id           String    @id @default(cuid())
+  token        String    @unique @default(cuid())
+  tripId       String
+  cityId       String?
+  invitedById  String
+  expiresAt    DateTime?
+  acceptedAt   DateTime?
+  acceptedById String?
+  createdAt    DateTime  @default(now())
+
+  trip       Trip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  city       City? @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  invitedBy  User  @relation("InvitedBy", fields: [invitedById], references: [id])
+  acceptedBy User? @relation("AcceptedBy", fields: [acceptedById], references: [id])
+
+  @@index([tripId])
+  @@index([cityId])
+}

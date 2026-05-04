@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Buenos Aires",
+    "lat": -34.6037,
+    "lng": -58.3816,
+    "countryCode": "AR"
+  },
+  {
+    "name": "Madrid",
+    "lat": 40.4168,
+    "lng": -3.7038,
+    "countryCode": "ES"
+  },
+  {
+    "name": "Berlin",
+    "lat": 52.52,
+    "lng": 13.405,
+    "countryCode": "DE"
+  }
+]

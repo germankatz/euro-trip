@@ -1,0 +1,54 @@
+# Docker Compose stack for Dokploy (or any docker-compose-compatible host).
+#
+# After the FIRST deploy (and after any schema change), run:
+#   docker compose exec app npx prisma migrate deploy
+# Dokploy users: configure this as a pre-deploy / post-deploy hook so it
+# runs automatically on every release.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - uploads_data:/data/uploads
+    healthcheck:
+      # /api/health is expected to return 2xx when the app is ready.
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Mapped on the host as 5433 to avoid clashing with a local Postgres
+    # install. For local dev outside Docker, point DATABASE_URL at
+    # postgresql://postgres:postgres@localhost:5433/eurotrip
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pg_data:
+  uploads_data:
