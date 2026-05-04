@@ -157,19 +157,12 @@ El archivo `prisma/cities.seed.json` no existe (no está en el repo). Copialo de
 **"Auth.js da error sobre NEXTAUTH_SECRET"**
 La var no está seteada o vale el default `changeme-...`. Generá uno con `openssl rand -base64 32` y pegalo en `.env` (o en las env vars de Dokploy).
 
-## Próximos pasos / estado
+## Estado
 
-Esta versión tiene completados:
-- Schema de Prisma con modelos base.
-- Auth.js v5 con Credentials provider + bcrypt + JWT.
-- Seed script idempotente (user + trip + cities).
-- Docker / docker-compose listo para Dokploy.
+Implementado: schema completo, Auth.js v5 + bcrypt + JWT + callbackUrl, seed
+idempotente, Docker/Dokploy, mapa fullscreen Mapbox, bottom sheet draggable,
+CRUD de cities (con drag-to-reorder shared para seed), CRUD de transports +
+activities, autocomplete Nominatim, invitations link-based, markdown WYSIWYG,
+image upload local con lightbox, archive cascade.
 
-Falta (en algún orden razonable, ver el spec original para detalle):
-- Mapa fullscreen con Mapbox GL JS (necesita `NEXT_PUBLIC_MAPBOX_TOKEN`).
-- Bottom card draggable (framer-motion).
-- CRUD de cities, transports, activities.
-- Sistema de invitations.
-- Markdown editor en notas (ya tenemos `@uiw/react-md-editor` en deps).
-- Image upload (escribiendo a `UPLOAD_DIR`).
-- Vista de archived / pasados.
+Lo que queda por hacer está en [TODO.md](TODO.md).
