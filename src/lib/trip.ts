@@ -41,7 +41,27 @@ export type VisibleCity = Pick<
   | "visibility"
   | "order"
   | "archivedAt"
+  | "createdById"
 >;
+
+export type TripMemberLite = {
+  userId: string;
+  name: string;
+  email: string;
+};
+
+export async function getTripMembers(tripId: string): Promise<TripMemberLite[]> {
+  const rows = await prisma.tripMember.findMany({
+    where: { tripId },
+    include: { user: { select: { id: true, name: true, email: true } } },
+    orderBy: { joinedAt: "asc" },
+  });
+  return rows.map((r) => ({
+    userId: r.user.id,
+    name: r.user.name,
+    email: r.user.email,
+  }));
+}
 
 /**
  * Cities visibles para el user en el trip:
@@ -65,6 +85,7 @@ export async function getVisibleCities(opts: {
     visibility: true,
     order: true,
     archivedAt: true,
+    createdById: true,
   };
 
   if (opts.isSeed) {

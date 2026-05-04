@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getTripContext, getVisibleCities } from "@/lib/trip";
+import {
+  getTripContext,
+  getVisibleCities,
+  getTripMembers,
+} from "@/lib/trip";
 import { AppShell } from "@/components/app-shell/AppShell";
 
 export default async function Home() {
@@ -25,22 +29,29 @@ export default async function Home() {
     );
   }
 
-  const cities = await getVisibleCities({
-    tripId: ctx.trip.id,
-    userId: session.user.id,
-    isSeed: ctx.isSeed,
-  });
+  const [cities, allMembers] = await Promise.all([
+    getVisibleCities({
+      tripId: ctx.trip.id,
+      userId: session.user.id,
+      isSeed: ctx.isSeed,
+    }),
+    getTripMembers(ctx.trip.id),
+  ]);
+
+  const otherTripMembers = allMembers.filter((m) => m.userId !== session.user.id);
 
   return (
     <AppShell
       trip={ctx.trip}
       cities={cities}
       user={{
+        id: session.user.id,
         name: session.user.name,
         email: session.user.email,
         role: session.user.role,
       }}
       isTripMember={ctx.isTripMember}
+      otherTripMembers={otherTripMembers}
     />
   );
 }

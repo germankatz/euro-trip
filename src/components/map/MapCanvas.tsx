@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import mapboxgl, { Map as MapboxMap, Marker as MapboxMarker } from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 import type { VisibleCity } from "@/lib/trip";
 
 type Props = {
@@ -40,9 +39,10 @@ export function MapCanvas({ cities, selectedCityId, onSelectCity }: Props) {
     mapRef.current = map;
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
+    map.on("error", (e) => {
+      console.error("[MapCanvas] mapbox error:", e.error?.message ?? e);
+    });
     map.on("load", () => {
-      // Fuente + layer para la polyline. La data se actualiza en otro effect
-      // cuando cambian las cities.
       map.addSource(ROUTE_SOURCE_ID, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -125,8 +125,14 @@ export function MapCanvas({ cities, selectedCityId, onSelectCity }: Props) {
     );
   }
 
-  return <div ref={containerRef} className="absolute inset-0" />;
+  return (
+    <div className="absolute inset-0 bg-zinc-200">
+      <div ref={containerRef} className="h-full w-full" />
+    </div>
+  );
 }
+
+export default MapCanvas;
 
 function renderMarkersAndRoute(
   map: MapboxMap,

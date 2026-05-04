@@ -1,24 +1,51 @@
 "use client";
 
 import { useState } from "react";
-import { MapCanvas } from "@/components/map/MapCanvas";
+import dynamic from "next/dynamic";
 import { BottomSheet, type SheetState } from "@/components/sheet/BottomSheet";
 import { Timeline } from "@/components/sheet/Timeline";
 import { UserMenu } from "@/components/header/UserMenu";
-import type { VisibleCity } from "@/lib/trip";
+import { CreateCityModal } from "@/components/cities/CreateCityModal";
+import { CityActions } from "@/components/cities/CityActions";
+import type { VisibleCity, TripMemberLite } from "@/lib/trip";
+import type { Actor } from "@/lib/permissions";
+
+const MapCanvas = dynamic(() => import("@/components/map/MapCanvas"), {
+  ssr: false,
+  loading: () => <div className="absolute inset-0 bg-zinc-200" />,
+});
 
 type Props = {
   trip: { id: string; name: string };
   cities: VisibleCity[];
-  user: { name?: string | null; email?: string | null; role: "seed" | "member" };
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    role: "seed" | "member";
+  };
   isTripMember: boolean;
+  /** Otros TripMembers (sin el actual) — para el selector de invitados */
+  otherTripMembers: TripMemberLite[];
 };
 
-export function AppShell({ trip, cities, user, isTripMember }: Props) {
+export function AppShell({
+  trip,
+  cities,
+  user,
+  isTripMember,
+  otherTripMembers,
+}: Props) {
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [sheetState, setSheetState] = useState<SheetState>("peek");
 
   const selectedCity = cities.find((c) => c.id === selectedCityId) ?? null;
+
+  const actor: Actor = {
+    userId: user.id,
+    role: user.role,
+    isTripMember,
+  };
 
   function handleSelectCity(id: string) {
     setSelectedCityId(id);
@@ -39,6 +66,16 @@ export function AppShell({ trip, cities, user, isTripMember }: Props) {
         {trip.name}
       </div>
 
+      {isTripMember && (
+        <CreateCityModal
+          members={otherTripMembers}
+          onCreated={(id) => {
+            setSelectedCityId(id);
+            setSheetState("half");
+          }}
+        />
+      )}
+
       <BottomSheet state={sheetState} onStateChange={setSheetState}>
         <SheetContent
           state={sheetState}
@@ -46,7 +83,7 @@ export function AppShell({ trip, cities, user, isTripMember }: Props) {
           selectedCity={selectedCity}
           onSelectCity={handleSelectCity}
           onBack={() => setSelectedCityId(null)}
-          isTripMember={isTripMember}
+          actor={actor}
         />
       </BottomSheet>
     </div>
@@ -59,21 +96,21 @@ function SheetContent({
   selectedCity,
   onSelectCity,
   onBack,
-  isTripMember,
+  actor,
 }: {
   state: SheetState;
   cities: VisibleCity[];
   selectedCity: VisibleCity | null;
   onSelectCity: (id: string) => void;
   onBack: () => void;
-  isTripMember: boolean;
+  actor: Actor;
 }) {
   if (selectedCity && state !== "peek") {
     return (
       <CityDetail
         city={selectedCity}
+        actor={actor}
         onBack={onBack}
-        isTripMember={isTripMember}
       />
     );
   }
@@ -89,8 +126,8 @@ function SheetContent({
 
       {state === "full" && (
         <div className="px-4 pt-2 text-xs text-zinc-500">
-          {isTripMember
-            ? "Tirá una ciudad para ver el detalle. Próximo: botón para crear ciudad/transporte/actividad."
+          {actor.isTripMember
+            ? "Tocá una ciudad para ver el detalle, o usá el botón + para agregar una nueva."
             : "Estás viendo el viaje en modo lectura. Pedile al organizador que te invite al trip para crear o editar."}
         </div>
       )}
@@ -100,12 +137,12 @@ function SheetContent({
 
 function CityDetail({
   city,
+  actor,
   onBack,
-  isTripMember: _isTripMember,
 }: {
   city: VisibleCity;
+  actor: Actor;
   onBack: () => void;
-  isTripMember: boolean;
 }) {
   return (
     <div className="px-4 space-y-4">
@@ -124,7 +161,14 @@ function CityDetail({
             grupo
           </span>
         )}
+        {city.archivedAt && (
+          <span className="text-[10px] uppercase tracking-wider text-amber-700 border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50">
+            archivada
+          </span>
+        )}
       </div>
+
+      <CityActions actor={actor} city={city} onAfterMutation={onBack} />
 
       <Section title="Cómo llegás">
         <Empty>Todavía no hay transportes hacia esta ciudad.</Empty>
