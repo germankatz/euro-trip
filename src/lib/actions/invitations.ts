@@ -132,6 +132,11 @@ export async function acceptInvitationAction(
       data: [{ cityId: invitation.cityId!, userId: actor.userId }],
       skipDuplicates: true,
     });
+    await tx.invitationAcceptance.upsert({
+      where: { invitationId_userId: { invitationId: invitation.id, userId: actor.userId } },
+      create: { invitationId: invitation.id, userId: actor.userId },
+      update: {},
+    });
     if (!invitation.acceptedAt) {
       await tx.invitation.update({
         where: { id: invitation.id },
@@ -149,6 +154,7 @@ export type CityInvitationListItem = {
   createdAt: Date;
   acceptedByName: string | null;
   acceptedAt: Date | null;
+  acceptances: { name: string | null }[];
 };
 
 export async function listCityInvitationsAction(
@@ -187,6 +193,7 @@ export async function listCityInvitationsAction(
       createdAt: true,
       acceptedAt: true,
       acceptedBy: { select: { name: true } },
+      acceptances: { select: { user: { select: { name: true } } }, orderBy: { acceptedAt: "asc" } },
     },
   });
 
@@ -198,6 +205,7 @@ export async function listCityInvitationsAction(
         createdAt: r.createdAt,
         acceptedAt: r.acceptedAt,
         acceptedByName: r.acceptedBy?.name ?? null,
+        acceptances: r.acceptances.map((a) => ({ name: a.user.name })),
       })),
     },
   };

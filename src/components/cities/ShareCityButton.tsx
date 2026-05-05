@@ -207,11 +207,20 @@ function InvitationRow({
       <div className="flex items-center justify-between text-xs text-zinc-500">
         <span>Creado {formatDate(item.createdAt)}</span>
         <span>
-          {item.acceptedAt
-            ? `Aceptada por ${item.acceptedByName ?? "alguien"}`
-            : "no aceptada todavía"}
+          {item.acceptances.length === 0
+            ? "no aceptada todavía"
+            : `${item.acceptances.length} aceptada${item.acceptances.length > 1 ? "s" : ""}`}
         </span>
       </div>
+      {item.acceptances.length > 0 && (
+        <ul className="mt-1 space-y-0.5">
+          {item.acceptances.map((a, i) => (
+            <li key={i} className="text-xs text-zinc-500 pl-2 before:content-['·'] before:mr-1">
+              {a.name ?? "Usuario"}
+            </li>
+          ))}
+        </ul>
+      )}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
