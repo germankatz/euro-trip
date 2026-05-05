@@ -55,13 +55,11 @@ COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
 # Prisma: the generated client lives outside .next, and the schema is needed
-# by the engines at runtime.
+# by the engines at runtime. Copy full node_modules so prisma CLI has its
+# complete dependency tree (effect, fast-check, etc.) for migrate deploy.
 COPY --from=builder --chown=node:node /app/src/generated/prisma ./src/generated/prisma
 COPY --from=builder --chown=node:node /app/prisma ./prisma
-
-COPY --from=builder --chown=node:node /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=node:node /app/node_modules/effect ./node_modules/effect
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 
 USER node
 
