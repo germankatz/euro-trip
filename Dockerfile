@@ -61,7 +61,7 @@ COPY --from=builder --chown=node:node /app/prisma ./prisma
 
 COPY --from=builder --chown=node:node /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=builder --chown=node:node /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=node:node /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
+COPY --from=builder --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
 
 USER node
 
