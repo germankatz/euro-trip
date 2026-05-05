@@ -38,7 +38,7 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 # Prisma engines (query engine binary) need OpenSSL at runtime too.
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl bash
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
