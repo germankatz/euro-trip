@@ -18,12 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { EditTransportDialog } from "@/components/transports/EditTransportDialog";
+import { EditAccommodationDialog } from "@/components/accommodations/EditAccommodationDialog";
 import {
-  archiveTransportAction,
-  unarchiveTransportAction,
-  deleteTransportAction,
-} from "@/lib/actions/transports";
+  archiveAccommodationAction,
+  unarchiveAccommodationAction,
+  deleteAccommodationAction,
+} from "@/lib/actions/accommodations";
 import type { Actor } from "@/lib/permissions";
 import {
   canEdit,
@@ -31,29 +31,29 @@ import {
   canUnarchive,
   canDelete,
 } from "@/lib/permissions";
-import type { VisibleTransport } from "@/lib/trip";
+import type { VisibleAccommodation } from "@/lib/trip";
 
 type Props = {
   actor: Actor;
-  transport: VisibleTransport;
+  accommodation: VisibleAccommodation;
   onAfterMutation?: () => void;
 };
 
-export function TransportActions({ actor, transport, onAfterMutation }: Props) {
+export function AccommodationActions({ actor, accommodation, onAfterMutation }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [confirm, setConfirm] = useState<"archive" | "delete" | null>(null);
   const [unarchivePending, startUnarchive] = useTransition();
 
-  const showEdit = canEdit(actor, transport);
-  const showArchive = canArchive(actor, transport);
-  const showUnarchive = canUnarchive(actor, transport);
+  const showEdit = canEdit(actor, accommodation);
+  const showArchive = canArchive(actor, accommodation);
+  const showUnarchive = canUnarchive(actor, accommodation);
   const showDelete = canDelete(actor);
 
   if (!showEdit && !showArchive && !showUnarchive && !showDelete) return null;
 
   function handleUnarchive() {
     startUnarchive(async () => {
-      const result = await unarchiveTransportAction(transport.id);
+      const result = await unarchiveAccommodationAction(accommodation.id);
       if (result.ok) onAfterMutation?.();
       else alert(result.error);
     });
@@ -94,16 +94,16 @@ export function TransportActions({ actor, transport, onAfterMutation }: Props) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditTransportDialog
+      <EditAccommodationDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        transport={transport}
+        accommodation={accommodation}
       />
 
       {confirm && (
         <ConfirmDialog
           mode={confirm}
-          transport={transport}
+          accommodation={accommodation}
           onClose={() => setConfirm(null)}
           onAfterMutation={onAfterMutation}
         />
@@ -114,12 +114,12 @@ export function TransportActions({ actor, transport, onAfterMutation }: Props) {
 
 function ConfirmDialog({
   mode,
-  transport,
+  accommodation,
   onClose,
   onAfterMutation,
 }: {
   mode: "archive" | "delete";
-  transport: VisibleTransport;
+  accommodation: VisibleAccommodation;
   onClose: () => void;
   onAfterMutation?: () => void;
 }) {
@@ -132,8 +132,8 @@ function ConfirmDialog({
     setError(null);
     startTransition(async () => {
       const result = isDelete
-        ? await deleteTransportAction(transport.id)
-        : await archiveTransportAction(transport.id);
+        ? await deleteAccommodationAction(accommodation.id)
+        : await archiveAccommodationAction(accommodation.id);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -148,12 +148,12 @@ function ConfirmDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isDelete ? "Eliminar transporte" : "Archivar transporte"}
+            {isDelete ? "Eliminar" : "Archivar"} &quot;{accommodation.title}&quot;
           </DialogTitle>
           <DialogDescription>
             {isDelete
-              ? "¿Eliminar definitivamente? Esta acción es irreversible."
-              : "¿Archivar este transporte? Podés restaurarlo después."}
+              ? "¿Eliminar definitivamente? No se puede deshacer."
+              : "¿Archivar este alojamiento?"}
           </DialogDescription>
         </DialogHeader>
         {error && <p className="text-sm text-red-600">{error}</p>}

@@ -3,6 +3,7 @@ import type {
   CityModel,
   TransportModel,
   ActivityModel,
+  AccommodationModel,
 } from "@/generated/prisma/models";
 
 export type TripContext = {
@@ -148,6 +149,25 @@ export type VisibleActivity = Pick<
   | "cityId"
   | "title"
   | "mapsUrl"
+  | "lat"
+  | "lng"
+  | "notesMd"
+  | "imageUrls"
+  | "createdById"
+  | "createdAt"
+  | "archivedAt"
+>;
+
+export type VisibleAccommodation = Pick<
+  AccommodationModel,
+  | "id"
+  | "cityId"
+  | "title"
+  | "startDate"
+  | "endDate"
+  | "mapsUrl"
+  | "lat"
+  | "lng"
   | "notesMd"
   | "imageUrls"
   | "createdById"
@@ -181,6 +201,24 @@ const activitySelect = {
   cityId: true,
   title: true,
   mapsUrl: true,
+  lat: true,
+  lng: true,
+  notesMd: true,
+  imageUrls: true,
+  createdById: true,
+  createdAt: true,
+  archivedAt: true,
+} as const;
+
+const accommodationSelect = {
+  id: true,
+  cityId: true,
+  title: true,
+  startDate: true,
+  endDate: true,
+  mapsUrl: true,
+  lat: true,
+  lng: true,
   notesMd: true,
   imageUrls: true,
   createdById: true,
@@ -246,12 +284,17 @@ export async function getVisibleTransports(opts: {
 /**
  * Activities visibles para el user: las que pertenecen a una city visible.
  * (Fácil porque cada activity tiene exactamente una city.)
+ *
+ * Backfill lazy: si una activity tiene `mapsUrl` pero `lat`/`lng` nulos,
+ * resolvemos las coords en este request y las persistimos. Es one-shot —
+ * en el siguiente render ya están guardadas. El timeout corto evita que
+ * un URL roto bloquee el SSR.
  */
 export async function getVisibleActivities(opts: {
   visibleCityIds: string[];
   includeArchived?: boolean;
 }): Promise<VisibleActivity[]> {
-  return prisma.activity.findMany({
+  const rows = await prisma.activity.findMany({
     where: {
       cityId: { in: opts.visibleCityIds },
       ...(opts.includeArchived ? {} : { archivedAt: null }),
@@ -259,4 +302,99 @@ export async function getVisibleActivities(opts: {
     orderBy: { createdAt: "asc" },
     select: activitySelect,
   });
+
+  const pendingBackfill = rows.filter(
+    (r) => r.mapsUrl && (r.lat == null || r.lng == null),
+  );
+  if (pendingBackfill.length === 0) return rows;
+
+  const { resolveCoordsFromMapsUrl } = await import("@/lib/mapsUrl");
+  const resolved = await Promise.allSettled(
+    pendingBackfill.map(async (r) => ({
+      id: r.id,
+      coords: await resolveCoordsFromMapsUrl(r.mapsUrl, { timeoutMs: 3000 }),
+    })),
+  );
+
+  const updates = resolved
+    .filter(
+      (r): r is PromiseFulfilledResult<{ id: string; coords: { lat: number; lng: number } | null }> =>
+        r.status === "fulfilled" && !!r.value.coords,
+    )
+    .map((r) => r.value);
+
+  if (updates.length > 0) {
+    await Promise.allSettled(
+      updates.map((u) =>
+        prisma.activity.update({
+          where: { id: u.id },
+          data: { lat: u.coords!.lat, lng: u.coords!.lng },
+        }),
+      ),
+    );
+    // Mergear coords en las rows que devolvemos sin volver a pegarle a la DB.
+    const byId = new Map(updates.map((u) => [u.id, u.coords!]));
+    return rows.map((r) => {
+      const c = byId.get(r.id);
+      return c ? { ...r, lat: c.lat, lng: c.lng } : r;
+    });
+  }
+
+  return rows;
+}
+
+/**
+ * Accommodations visibles. Mismo patrón que activities: pertenecen a una city
+ * visible y backfill lazy de coords desde mapsUrl.
+ */
+export async function getVisibleAccommodations(opts: {
+  visibleCityIds: string[];
+  includeArchived?: boolean;
+}): Promise<VisibleAccommodation[]> {
+  const rows = await prisma.accommodation.findMany({
+    where: {
+      cityId: { in: opts.visibleCityIds },
+      ...(opts.includeArchived ? {} : { archivedAt: null }),
+    },
+    orderBy: { startDate: "asc" },
+    select: accommodationSelect,
+  });
+
+  const pendingBackfill = rows.filter(
+    (r) => r.mapsUrl && (r.lat == null || r.lng == null),
+  );
+  if (pendingBackfill.length === 0) return rows;
+
+  const { resolveCoordsFromMapsUrl } = await import("@/lib/mapsUrl");
+  const resolved = await Promise.allSettled(
+    pendingBackfill.map(async (r) => ({
+      id: r.id,
+      coords: await resolveCoordsFromMapsUrl(r.mapsUrl, { timeoutMs: 3000 }),
+    })),
+  );
+
+  const updates = resolved
+    .filter(
+      (r): r is PromiseFulfilledResult<{ id: string; coords: { lat: number; lng: number } | null }> =>
+        r.status === "fulfilled" && !!r.value.coords,
+    )
+    .map((r) => r.value);
+
+  if (updates.length > 0) {
+    await Promise.allSettled(
+      updates.map((u) =>
+        prisma.accommodation.update({
+          where: { id: u.id },
+          data: { lat: u.coords!.lat, lng: u.coords!.lng },
+        }),
+      ),
+    );
+    const byId = new Map(updates.map((u) => [u.id, u.coords!]));
+    return rows.map((r) => {
+      const c = byId.get(r.id);
+      return c ? { ...r, lat: c.lat, lng: c.lng } : r;
+    });
+  }
+
+  return rows;
 }

@@ -21,6 +21,8 @@ export type ActionResult<T = undefined> =
 const createSchema = z.object({
   cityId: z.string().min(1),
   title: z.string().min(1).max(200),
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime(),
   mapsUrl: z
     .string()
     .url()
@@ -54,12 +56,12 @@ async function getActor(): Promise<Actor | null> {
   };
 }
 
-export async function createActivityAction(
+export async function createAccommodationAction(
   rawInput: unknown
 ): Promise<ActionResult<{ id: string }>> {
   const actor = await getActor();
   if (!actor || !canCreate(actor)) {
-    return { ok: false, error: "Sin permisos para crear actividades." };
+    return { ok: false, error: "Sin permisos para crear alojamientos." };
   }
 
   const parsed = createSchema.safeParse(rawInput);
@@ -70,8 +72,12 @@ export async function createActivityAction(
     };
   }
 
-  // Verificar que la city existe (no chequeo membership aquí: si el user
-  // logró abrir el detalle de la city ya pasó el filtro de visibility).
+  const start = new Date(parsed.data.startDate);
+  const end = new Date(parsed.data.endDate);
+  if (end < start) {
+    return { ok: false, error: "La fecha de fin no puede ser antes del inicio." };
+  }
+
   const city = await prisma.city.findUnique({
     where: { id: parsed.data.cityId },
     select: { id: true },
@@ -82,10 +88,12 @@ export async function createActivityAction(
     ? await resolveCoordsFromMapsUrl(parsed.data.mapsUrl)
     : null;
 
-  const activity = await prisma.activity.create({
+  const accommodation = await prisma.accommodation.create({
     data: {
       cityId: parsed.data.cityId,
       title: parsed.data.title,
+      startDate: start,
+      endDate: end,
       mapsUrl: parsed.data.mapsUrl,
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
@@ -96,10 +104,10 @@ export async function createActivityAction(
     select: { id: true },
   });
   revalidatePath("/");
-  return { ok: true, data: { id: activity.id } };
+  return { ok: true, data: { id: accommodation.id } };
 }
 
-export async function updateActivityAction(
+export async function updateAccommodationAction(
   rawInput: unknown
 ): Promise<ActionResult> {
   const actor = await getActor();
@@ -113,17 +121,21 @@ export async function updateActivityAction(
     };
   }
 
-  const existing = await prisma.activity.findUnique({
+  const start = new Date(parsed.data.startDate);
+  const end = new Date(parsed.data.endDate);
+  if (end < start) {
+    return { ok: false, error: "La fecha de fin no puede ser antes del inicio." };
+  }
+
+  const existing = await prisma.accommodation.findUnique({
     where: { id: parsed.data.id },
     select: { createdById: true, archivedAt: true, mapsUrl: true, lat: true, lng: true },
   });
-  if (!existing) return { ok: false, error: "Actividad no encontrada." };
+  if (!existing) return { ok: false, error: "Alojamiento no encontrado." };
   if (!canEdit(actor, existing)) {
     return { ok: false, error: "Solo el autor o el seed pueden editar." };
   }
 
-  // Solo re-resolver si cambió el mapsUrl (evita pegarle a Google en cada
-  // edición de notas/título).
   let coordsUpdate: { lat: number | null; lng: number | null } | null = null;
   if (parsed.data.mapsUrl !== existing.mapsUrl) {
     const coords = parsed.data.mapsUrl
@@ -132,10 +144,12 @@ export async function updateActivityAction(
     coordsUpdate = { lat: coords?.lat ?? null, lng: coords?.lng ?? null };
   }
 
-  await prisma.activity.update({
+  await prisma.accommodation.update({
     where: { id: parsed.data.id },
     data: {
       title: parsed.data.title,
+      startDate: start,
+      endDate: end,
       mapsUrl: parsed.data.mapsUrl,
       ...(coordsUpdate ?? {}),
       notesMd: parsed.data.notesMd,
@@ -146,56 +160,56 @@ export async function updateActivityAction(
   return { ok: true, data: undefined };
 }
 
-export async function archiveActivityAction(
-  activityId: string
+export async function archiveAccommodationAction(
+  accommodationId: string
 ): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor) return { ok: false, error: "Sin sesión." };
-  const a = await prisma.activity.findUnique({
-    where: { id: activityId },
+  const a = await prisma.accommodation.findUnique({
+    where: { id: accommodationId },
     select: { createdById: true, archivedAt: true },
   });
-  if (!a) return { ok: false, error: "Actividad no encontrada." };
+  if (!a) return { ok: false, error: "Alojamiento no encontrado." };
   if (!canArchive(actor, a)) {
     return { ok: false, error: "Sin permisos para archivar." };
   }
-  await prisma.activity.update({
-    where: { id: activityId },
+  await prisma.accommodation.update({
+    where: { id: accommodationId },
     data: { archivedAt: new Date(), archivedById: actor.userId },
   });
   revalidatePath("/");
   return { ok: true, data: undefined };
 }
 
-export async function unarchiveActivityAction(
-  activityId: string
+export async function unarchiveAccommodationAction(
+  accommodationId: string
 ): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor) return { ok: false, error: "Sin sesión." };
-  const a = await prisma.activity.findUnique({
-    where: { id: activityId },
+  const a = await prisma.accommodation.findUnique({
+    where: { id: accommodationId },
     select: { createdById: true, archivedAt: true },
   });
-  if (!a) return { ok: false, error: "Actividad no encontrada." };
+  if (!a) return { ok: false, error: "Alojamiento no encontrado." };
   if (!canUnarchive(actor, a)) {
     return { ok: false, error: "Sin permisos para desarchivar." };
   }
-  await prisma.activity.update({
-    where: { id: activityId },
+  await prisma.accommodation.update({
+    where: { id: accommodationId },
     data: { archivedAt: null, archivedById: null },
   });
   revalidatePath("/");
   return { ok: true, data: undefined };
 }
 
-export async function deleteActivityAction(
-  activityId: string
+export async function deleteAccommodationAction(
+  accommodationId: string
 ): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor || !canDelete(actor)) {
     return { ok: false, error: "Solo el seed puede eliminar." };
   }
-  await prisma.activity.delete({ where: { id: activityId } });
+  await prisma.accommodation.delete({ where: { id: accommodationId } });
   revalidatePath("/");
   return { ok: true, data: undefined };
 }

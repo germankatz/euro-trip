@@ -16,11 +16,13 @@ async function formAction(_prev: ActionResult, formData: FormData) {
 
 export default function RegisterPage() {
   return (
-    <main className="min-h-svh grid place-items-center px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold">Crear cuenta</h1>
-          <p className="text-sm text-muted-foreground">
+    <main className="min-h-svh grid place-items-center px-4 bg-white">
+      <div className="w-full max-w-sm space-y-7">
+        <div className="space-y-2 text-center">
+          <h1 className="text-[28px] font-bold tracking-[-0.01em] text-[var(--ink)]">
+            Crear cuenta
+          </h1>
+          <p className="text-sm text-[var(--muted-foreground)]">
             Registrate para sumarte al viaje.
           </p>
         </div>
@@ -95,14 +97,17 @@ function RegisterFormInner() {
           <p className="text-sm text-destructive">{state.error}</p>
         )}
 
-        <Button type="submit" className="w-full" disabled={pending}>
+        <Button type="submit" size="lg" className="w-full h-12 text-[16px]" disabled={pending}>
           {pending ? "Creando…" : "Crear cuenta"}
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-[var(--muted-foreground)]">
         ¿Ya tenés cuenta?{" "}
-        <Link href={loginHref} className="underline">
+        <Link
+          href={loginHref}
+          className="font-medium text-[var(--ink)] underline underline-offset-4 decoration-[var(--hairline)] hover:decoration-[var(--ink)]"
+        >
           Ingresá
         </Link>
       </p>

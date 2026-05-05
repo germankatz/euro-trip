@@ -6,6 +6,7 @@ import {
   getTripMembers,
   getVisibleTransports,
   getVisibleActivities,
+  getVisibleAccommodations,
 } from "@/lib/trip";
 import { AppShell } from "@/components/app-shell/AppShell";
 
@@ -20,11 +21,13 @@ export default async function Home() {
 
   if (!ctx) {
     return (
-      <main className="min-h-svh grid place-items-center p-8 text-center">
+      <main className="min-h-svh grid place-items-center bg-white p-8 text-center">
         <div className="space-y-2 max-w-md">
-          <h1 className="text-xl font-semibold">No hay un Trip configurado</h1>
-          <p className="text-sm text-zinc-600">
-            Corré <code className="text-xs bg-zinc-100 px-1 rounded">npm run db:seed</code> para crear el viaje inicial.
+          <h1 className="text-[22px] font-semibold text-[var(--ink)]">
+            No hay un Trip configurado
+          </h1>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Corré <code className="text-xs bg-[var(--surface-soft)] px-1.5 py-0.5 rounded">npm run db:seed</code> para crear el viaje inicial.
           </p>
         </div>
       </main>
@@ -43,7 +46,7 @@ export default async function Home() {
   ]);
 
   const visibleCityIds = cities.map((c) => c.id);
-  const [transports, activities] = await Promise.all([
+  const [transports, activities, accommodations] = await Promise.all([
     getVisibleTransports({
       tripId: ctx.trip.id,
       visibleCityIds,
@@ -51,6 +54,10 @@ export default async function Home() {
       includeArchived: true,
     }),
     getVisibleActivities({
+      visibleCityIds,
+      includeArchived: true,
+    }),
+    getVisibleAccommodations({
       visibleCityIds,
       includeArchived: true,
     }),
@@ -64,6 +71,7 @@ export default async function Home() {
       cities={cities}
       transports={transports}
       activities={activities}
+      accommodations={accommodations}
       user={{
         id: session.user.id,
         name: session.user.name,

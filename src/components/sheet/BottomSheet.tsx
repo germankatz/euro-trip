@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   motion,
   useMotionValue,
+  useTransform,
   animate,
   useDragControls,
   type PanInfo,
@@ -20,7 +21,10 @@ type Props = {
 // peek = px fijos, half/full = fracción del viewport (svh-equivalent)
 const PEEK_PX = 130;
 const HALF_FRAC = 0.5;
-const FULL_FRAC = 0.95;
+const FULL_FRAC = 0.9;
+
+// Altura del drag handle (pt-3 + h-1 + pb-2 + border-t).
+const HANDLE_HEIGHT = 28;
 
 export function BottomSheet({ state, onStateChange, children }: Props) {
   const y = useMotionValue(0);
@@ -50,6 +54,14 @@ export function BottomSheet({ state, onStateChange, children }: Props) {
     return () => controls.stop();
   }, [state, vh]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Altura del área scrolleable = lo que realmente se ve del sheet.
+  // Sin esto, el container interno mide `vh - handle` (todo el sheet,
+  // incluso la parte off-screen) y el contenido nunca scrollea aunque
+  // la mitad inferior esté fuera de pantalla.
+  const scrollHeight = useTransform(y, (yVal) =>
+    Math.max(0, vh - yVal - HANDLE_HEIGHT),
+  );
+
   function handleDragEnd(_: PointerEvent, info: PanInfo) {
     if (!vh) return;
     const current = y.get();
@@ -78,19 +90,23 @@ export function BottomSheet({ state, onStateChange, children }: Props) {
       dragConstraints={{ top: snaps.full, bottom: snaps.peek }}
       dragElastic={0.04}
       onDragEnd={handleDragEnd}
-      style={{ y, height: vh, touchAction: "none" }}
-      className="fixed left-0 right-0 top-0 z-30 flex flex-col bg-white/95 backdrop-blur-md rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] border-t border-zinc-200/60"
+      style={{ y, height: vh }}
+      className="fixed left-0 right-0 top-0 z-30 flex flex-col bg-white rounded-t-[24px] border-t border-[var(--hairline)] shadow-[var(--shadow-card)] md:left-4 md:right-auto md:w-[420px] md:rounded-2xl md:border"
     >
       <div
-        className="flex flex-col items-center gap-1 pt-2.5 pb-1.5 cursor-grab active:cursor-grabbing select-none"
+        className="flex flex-col items-center gap-1 pt-3 pb-2 cursor-grab active:cursor-grabbing select-none"
+        style={{ touchAction: "none" }}
         onPointerDown={(e) => dragControls.start(e)}
       >
-        <div className="h-1.5 w-10 rounded-full bg-zinc-300" />
+        <div className="h-1 w-9 rounded-full bg-[var(--hairline)]" />
       </div>
 
-      <div className="flex-1 overflow-y-auto overscroll-contain pb-8">
+      <motion.div
+        style={{ height: scrollHeight }}
+        className="overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)]"
+      >
         {children}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

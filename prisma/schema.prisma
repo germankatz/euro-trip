@@ -38,8 +38,11 @@ model User {
   transportsArchived  Transport[]  @relation("TransportArchivedBy")
   activitiesCreated   Activity[]   @relation("ActivityCreatedBy")
   activitiesArchived  Activity[]   @relation("ActivityArchivedBy")
+  accommodationsCreated   Accommodation[] @relation("AccommodationCreatedBy")
+  accommodationsArchived  Accommodation[] @relation("AccommodationArchivedBy")
   invitationsSent     Invitation[] @relation("InvitedBy")
   invitationsAccepted Invitation[] @relation("AcceptedBy")
+  invitationAcceptances InvitationAcceptance[]
 }
 
 // =====================================================================
@@ -105,8 +108,9 @@ model City {
   trip       Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
   createdBy  User         @relation("CityCreatedBy", fields: [createdById], references: [id])
   archivedBy User?        @relation("CityArchivedBy", fields: [archivedById], references: [id])
-  members    CityMember[]
-  activities Activity[]
+  members        CityMember[]
+  activities     Activity[]
+  accommodations Accommodation[]
 
   // Transports linkeados (auto por proximidad < 50km al guardar)
   transportsArriving  Transport[]  @relation("TransportToCity")
@@ -195,6 +199,11 @@ model Activity {
   cityId    String
   title     String
   mapsUrl   String?
+  // Coordenadas resueltas a partir de mapsUrl (extracción directa o
+  // siguiendo redirect en short URLs `maps.app.goo.gl`). Nullable: muchas
+  // URLs no son parseables o aún no se resolvieron.
+  lat       Float?
+  lng       Float?
   notesMd   String   @default("")
   imageUrls String[] @default([])
 
@@ -207,6 +216,36 @@ model Activity {
   city       City  @relation(fields: [cityId], references: [id], onDelete: Cascade)
   createdBy  User  @relation("ActivityCreatedBy", fields: [createdById], references: [id])
   archivedBy User? @relation("ActivityArchivedBy", fields: [archivedById], references: [id])
+
+  @@index([cityId, archivedAt])
+}
+
+// =====================================================================
+//  ACCOMMODATION
+// =====================================================================
+
+model Accommodation {
+  id        String   @id @default(cuid())
+  cityId    String
+  title     String
+  startDate DateTime
+  endDate   DateTime
+  mapsUrl   String?
+  // Coordenadas resueltas a partir de mapsUrl (mismo flujo que Activity).
+  lat       Float?
+  lng       Float?
+  notesMd   String   @default("")
+  imageUrls String[] @default([])
+
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  archivedAt   DateTime?
+  archivedById String?
+
+  city       City  @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdBy  User  @relation("AccommodationCreatedBy", fields: [createdById], references: [id])
+  archivedBy User? @relation("AccommodationArchivedBy", fields: [archivedById], references: [id])
 
   @@index([cityId, archivedAt])
 }
@@ -238,6 +277,25 @@ model Invitation {
   invitedBy  User  @relation("InvitedBy", fields: [invitedById], references: [id])
   acceptedBy User? @relation("AcceptedBy", fields: [acceptedById], references: [id])
 
+  acceptances InvitationAcceptance[]
+
   @@index([tripId])
   @@index([cityId])
+}
+
+// Cada vez que un user acepta una invitación se crea una row aquí. La
+// invitación-link puede ser aceptada por múltiples personas; los campos
+// `acceptedAt`/`acceptedById` en Invitation guardan la primera aceptación
+// (compat) pero la lista completa vive en esta tabla.
+model InvitationAcceptance {
+  invitationId String
+  userId       String
+  acceptedAt   DateTime @default(now())
+
+  invitation Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([invitationId, userId])
+  @@index([invitationId])
+  @@index([userId])
 }

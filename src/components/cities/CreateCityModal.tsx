@@ -37,7 +37,7 @@ export function CreateCityModal({ members, onCreated }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="absolute bottom-[150px] right-4 z-40 grid h-12 w-12 place-items-center rounded-full bg-zinc-900 text-white shadow-lg hover:bg-zinc-800 active:scale-95 transition"
+        className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] z-40 grid h-12 w-12 place-items-center rounded-full bg-[var(--rausch)] text-white ring-1 ring-black/10 shadow-lg transition hover:bg-[var(--rausch-active)] active:scale-95"
         aria-label="Agregar ciudad"
       >
         <Plus className="h-5 w-5" strokeWidth={2.5} />

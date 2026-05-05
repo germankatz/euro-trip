@@ -1,17 +1,17 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import { BedDouble, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { VisibleActivity } from "@/lib/trip";
+import type { VisibleAccommodation } from "@/lib/trip";
+import { formatStayRange } from "./accommodation-shared";
 
 type Props = {
-  activity: VisibleActivity;
+  accommodation: VisibleAccommodation;
   archived?: boolean;
   onClick: () => void;
 };
 
-export function ActivityRow({ activity, archived, onClick }: Props) {
-  const preview = firstLine(activity.notesMd);
+export function AccommodationRow({ accommodation, archived, onClick }: Props) {
   return (
     <button
       type="button"
@@ -21,17 +21,22 @@ export function ActivityRow({ activity, archived, onClick }: Props) {
         archived && "opacity-60"
       )}
     >
+      <BedDouble
+        aria-hidden
+        className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]"
+      />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] font-semibold text-[var(--ink)]">
-          {activity.title}
+          {accommodation.title}
         </div>
-        {preview && (
-          <div className="truncate text-[13px] text-[var(--muted-foreground)]">
-            {preview}
-          </div>
-        )}
+        <div className="truncate text-[13px] text-[var(--muted-foreground)]">
+          {formatStayRange(
+            new Date(accommodation.startDate),
+            new Date(accommodation.endDate)
+          )}
+        </div>
       </div>
-      {activity.mapsUrl && (
+      {accommodation.mapsUrl && (
         <MapPin
           aria-hidden
           className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]"
@@ -39,10 +44,4 @@ export function ActivityRow({ activity, archived, onClick }: Props) {
       )}
     </button>
   );
-}
-
-function firstLine(md: string): string {
-  if (!md) return "";
-  const line = md.split(/\r?\n/).find((l) => l.trim().length > 0) ?? "";
-  return line.trim();
 }

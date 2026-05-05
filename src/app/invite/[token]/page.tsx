@@ -44,15 +44,17 @@ export default async function InvitePage({ params }: PageProps) {
     const callback = encodeURIComponent(`/invite/${token}`);
     return (
       <Card>
-        <h1 className="text-2xl font-semibold">Te invitaron a {cityName}</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-[28px] font-bold tracking-[-0.01em] text-[var(--ink)]">
+          Te invitaron a {cityName}
+        </h1>
+        <p className="text-sm text-[var(--muted-foreground)]">
           Sumate al tramo de {cityName} en {tripName}. Iniciá sesión o registrate
           para aceptar la invitación.
         </p>
         <div className="flex flex-col gap-2 pt-2">
           <Link
             href={`/login?callbackUrl=${callback}`}
-            className={buttonVariants({ size: "lg", className: "w-full" })}
+            className={buttonVariants({ size: "lg", className: "w-full h-12 text-[16px]" })}
           >
             Ingresar
           </Link>
@@ -61,7 +63,7 @@ export default async function InvitePage({ params }: PageProps) {
             className={buttonVariants({
               variant: "outline",
               size: "lg",
-              className: "w-full",
+              className: "w-full h-12 text-[16px]",
             })}
           >
             Crear cuenta
@@ -73,8 +75,10 @@ export default async function InvitePage({ params }: PageProps) {
 
   return (
     <Card>
-      <h1 className="text-2xl font-semibold">Te invitaron a {cityName}</h1>
-      <p className="text-sm text-muted-foreground">
+      <h1 className="text-[28px] font-bold tracking-[-0.01em] text-[var(--ink)]">
+        Te invitaron a {cityName}
+      </h1>
+      <p className="text-sm text-[var(--muted-foreground)]">
         Aceptá para sumarte al tramo de {cityName} en {tripName}.
       </p>
       <AcceptButton token={token} />
@@ -84,7 +88,7 @@ export default async function InvitePage({ params }: PageProps) {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-svh grid place-items-center px-4">
+    <main className="min-h-svh grid place-items-center px-4 bg-white">
       <div className="w-full max-w-sm space-y-4 text-center">{children}</div>
     </main>
   );
@@ -93,14 +97,16 @@ function Card({ children }: { children: React.ReactNode }) {
 function ErrorCard({ message }: { message: string }) {
   return (
     <Card>
-      <h1 className="text-2xl font-semibold">Invitación inválida</h1>
-      <p className="text-sm text-muted-foreground">{message}</p>
+      <h1 className="text-[28px] font-bold tracking-[-0.01em] text-[var(--ink)]">
+        Invitación inválida
+      </h1>
+      <p className="text-sm text-[var(--muted-foreground)]">{message}</p>
       <Link
         href="/"
         className={buttonVariants({
           variant: "outline",
           size: "lg",
-          className: "w-full",
+          className: "w-full h-12 text-[16px]",
         })}
       >
         Volver al inicio

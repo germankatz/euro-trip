@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Pencil, Archive, ArchiveRestore, Trash2, Loader2 } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore, Trash2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { KebabButton } from "@/components/ui/kebab-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EditCityDialog } from "@/components/cities/EditCityDialog";
-import { ShareCityButton } from "@/components/cities/ShareCityButton";
+import { ShareDialog } from "@/components/cities/ShareCityButton";
 import {
   archiveCityAction,
   unarchiveCityAction,
@@ -45,7 +52,9 @@ type Props = {
 
 export function CityActions({ actor, city, onAfterMutation }: Props) {
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [confirm, setConfirm] = useState<"archive" | "delete" | null>(null);
+  const [unarchivePending, startUnarchive] = useTransition();
 
   const showEdit = canEdit(actor, city);
   const showArchive = canArchive(actor, city);
@@ -66,47 +75,59 @@ export function CityActions({ actor, city, onAfterMutation }: Props) {
     return null;
   }
 
+  function handleUnarchive() {
+    startUnarchive(async () => {
+      const result = await unarchiveCityAction(city.id);
+      if (result.ok) onAfterMutation?.();
+      else alert(result.error);
+    });
+  }
+
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        {showEdit && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setEditOpen(true)}
-          >
-            <Pencil className="h-4 w-4" /> Editar
-          </Button>
-        )}
-        {showShare && <ShareCityButton city={city} />}
-        {showArchive && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setConfirm("archive")}
-          >
-            <Archive className="h-4 w-4" /> Archivar
-          </Button>
-        )}
-        {showUnarchive && (
-          <UnarchiveButton city={city} onDone={onAfterMutation} />
-        )}
-        {showDelete && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setConfirm("delete")}
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="h-4 w-4" /> Eliminar
-          </Button>
-        )}
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<KebabButton />} />
+        <DropdownMenuContent align="end" className="min-w-40">
+          {showEdit && (
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Pencil /> Editar
+            </DropdownMenuItem>
+          )}
+          {showShare && (
+            <DropdownMenuItem onClick={() => setShareOpen(true)}>
+              <Share2 /> Compartir
+            </DropdownMenuItem>
+          )}
+          {showArchive && (
+            <DropdownMenuItem onClick={() => setConfirm("archive")}>
+              <Archive /> Archivar
+            </DropdownMenuItem>
+          )}
+          {showUnarchive && (
+            <DropdownMenuItem
+              onClick={handleUnarchive}
+              disabled={unarchivePending}
+            >
+              <ArchiveRestore />
+              {unarchivePending ? "Desarchivando…" : "Desarchivar"}
+            </DropdownMenuItem>
+          )}
+          {showDelete && (
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setConfirm("delete")}
+            >
+              <Trash2 /> Eliminar
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <EditCityDialog open={editOpen} onOpenChange={setEditOpen} city={city} />
+
+      {shareOpen && (
+        <ShareDialog city={city} onClose={() => setShareOpen(false)} />
+      )}
 
       {confirm && (
         <CascadeConfirmDialog
@@ -117,34 +138,6 @@ export function CityActions({ actor, city, onAfterMutation }: Props) {
         />
       )}
     </>
-  );
-}
-
-function UnarchiveButton({
-  city,
-  onDone,
-}: {
-  city: CityForActions;
-  onDone?: () => void;
-}) {
-  const [pending, startTransition] = useTransition();
-  return (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      disabled={pending}
-      onClick={() => {
-        startTransition(async () => {
-          const result = await unarchiveCityAction(city.id);
-          if (result.ok) onDone?.();
-          else alert(result.error);
-        });
-      }}
-    >
-      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArchiveRestore className="h-4 w-4" />}
-      Desarchivar
-    </Button>
   );
 }
 
@@ -195,7 +188,7 @@ function CascadeConfirmDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isDelete ? "Eliminar" : "Archivar"} "{city.name}"
+            {isDelete ? "Eliminar" : "Archivar"} &quot;{city.name}&quot;
           </DialogTitle>
           <DialogDescription>
             {counts === null ? (

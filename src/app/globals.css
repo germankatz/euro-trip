@@ -39,6 +39,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Airbnb-flavored extra tokens (consumibles por utilidades arbitrarias) */
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-muted-soft: var(--muted-soft);
+  --color-hairline: var(--hairline);
+  --color-hairline-soft: var(--hairline-soft);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-strong: var(--surface-strong);
+  --color-rausch: var(--rausch);
+  --color-rausch-active: var(--rausch-active);
+  --color-rausch-disabled: var(--rausch-disabled);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -46,75 +59,102 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Airbnb single shadow tier (hover-floated cards, sheet, dropdowns) */
+  --shadow-card: rgba(0, 0, 0, 0.02) 0 0 0 1px, rgba(0, 0, 0, 0.04) 0 2px 6px 0,
+    rgba(0, 0, 0, 0.1) 0 4px 8px 0;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* === Airbnb palette === */
+  --rausch: #ff385c;
+  --rausch-active: #e00b41;
+  --rausch-disabled: #ffd1da;
+
+  --ink: #222222;
+  --body: #3f3f3f;
+  --muted-soft: #929292;
+
+  /* Bordes apenas perceptibles — el sistema descansa en jerarquía
+     tipográfica + sombra única, no en líneas duras. */
+  --hairline: #ebebeb;
+  --hairline-soft: #f1f1f1;
+  --surface-soft: #f7f7f7;
+  --surface-strong: #f2f2f2;
+
+  /* === Mapeo a tokens shadcn === */
+  --background: #ffffff;
+  --foreground: #222222;
+  --card: #ffffff;
+  --card-foreground: #222222;
+  --popover: #ffffff;
+  --popover-foreground: #222222;
+  --primary: #ff385c;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f7f7;
+  --secondary-foreground: #222222;
+  --muted: #f7f7f7;
+  --muted-foreground: #6a6a6a;
+  --accent: #f2f2f2;
+  --accent-foreground: #222222;
+  --destructive: #c13515;
+  --border: #ebebeb;
+  --input: #e2e2e2;
+  --ring: #222222;
+
+  --chart-1: #ff385c;
+  --chart-2: #6a6a6a;
+  --chart-3: #3f3f3f;
+  --chart-4: #c13515;
+  --chart-5: #222222;
+
+  /* Botones a 8px (Airbnb rounded.sm); cards usan rounded-2xl => ~14px */
+  --radius: 0.5rem;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #222222;
+  --sidebar-primary: #ff385c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f2f2;
+  --sidebar-accent-foreground: #222222;
+  --sidebar-border: #ebebeb;
+  --sidebar-ring: #222222;
 }
 
+/* No hay dark mode oficial — replicamos el set claro para que cualquier
+   ".dark" residual no rompa la paleta. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #ffffff;
+  --foreground: #222222;
+  --card: #ffffff;
+  --card-foreground: #222222;
+  --popover: #ffffff;
+  --popover-foreground: #222222;
+  --primary: #ff385c;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f7f7;
+  --secondary-foreground: #222222;
+  --muted: #f7f7f7;
+  --muted-foreground: #6a6a6a;
+  --accent: #f2f2f2;
+  --accent-foreground: #222222;
+  --destructive: #c13515;
+  --border: #ebebeb;
+  --input: #e2e2e2;
+  --ring: #222222;
+  --chart-1: #ff385c;
+  --chart-2: #6a6a6a;
+  --chart-3: #3f3f3f;
+  --chart-4: #c13515;
+  --chart-5: #222222;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #222222;
+  --sidebar-primary: #ff385c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f2f2;
+  --sidebar-accent-foreground: #222222;
+  --sidebar-border: #ebebeb;
+  --sidebar-ring: #222222;
 }
 
 @layer base {
@@ -123,8 +163,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
+  }
+  /* Headlines: pesos modestos (500-700), nunca 800+ — Airbnb-style */
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--ink);
+    letter-spacing: -0.01em;
   }
 }

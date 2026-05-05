@@ -17,7 +17,7 @@ export function TransportRow({ transport, archived, onClick }: Props) {
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-left transition hover:border-zinc-400 hover:bg-zinc-50",
+        "flex w-full items-center gap-3 rounded-2xl border border-[var(--hairline)] bg-white px-3.5 py-3 text-left transition-shadow hover:shadow-[var(--shadow-card)]",
         archived && "opacity-60"
       )}
     >
@@ -25,15 +25,17 @@ export function TransportRow({ transport, archived, onClick }: Props) {
         {meta.icon}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold">
+        <div className="truncate text-[14px] font-semibold text-[var(--ink)]">
           {transport.fromName} → {transport.toName}
         </div>
-        <div className="truncate text-xs text-zinc-500">
+        <div className="truncate text-[13px] text-[var(--muted-foreground)]">
           {formatTransportRange(transport.departureAt, transport.arrivalAt)}
         </div>
       </div>
       {transport.company && (
-        <span className="shrink-0 text-xs text-zinc-500">{transport.company}</span>
+        <span className="shrink-0 text-[12px] text-[var(--muted-foreground)]">
+          {transport.company}
+        </span>
       )}
     </button>
   );

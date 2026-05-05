@@ -7,8 +7,17 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+function Dialog({
+  disablePointerDismissal = true,
+  ...props
+}: DialogPrimitive.Root.Props) {
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      disablePointerDismissal={disablePointerDismissal}
+      {...props}
+    />
+  )
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
@@ -50,32 +59,42 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Popup
-        data-slot="dialog-content"
-        className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          className
-        )}
-        {...props}
-      >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            render={
-              <Button
-                variant="ghost"
-                className="absolute top-2 right-2"
-                size="icon-sm"
-              />
-            }
+      {/*
+        Wrapper fixed que ocupa todo el viewport y es el que scrollea.
+        Cuando el modal es más alto que la pantalla, scrollea el wrapper
+        completo (no un overflow interno) — el modal se mueve como si
+        fuera contenido de página.
+      */}
+      <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <DialogPrimitive.Popup
+            data-slot="dialog-content"
+            className={cn(
+              "relative grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+              className
+            )}
+            {...props}
           >
-            <XIcon
-            />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Popup>
+            {children}
+            {showCloseButton && (
+              <DialogPrimitive.Close
+                data-slot="dialog-close"
+                render={
+                  <Button
+                    variant="ghost"
+                    className="absolute top-2 right-2 z-10"
+                    size="icon-sm"
+                  />
+                }
+              >
+                <XIcon
+                />
+                <span className="sr-only">Close</span>
+              </DialogPrimitive.Close>
+            )}
+          </DialogPrimitive.Popup>
+        </div>
+      </div>
     </DialogPortal>
   )
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { BottomSheet, type SheetState } from "@/components/sheet/BottomSheet";
-import { Timeline } from "@/components/sheet/Timeline";
+import { CitiesList } from "@/components/sheet/CitiesList";
 import { UserMenu } from "@/components/header/UserMenu";
 import { CreateCityModal } from "@/components/cities/CreateCityModal";
 import { CityActions } from "@/components/cities/CityActions";
@@ -14,30 +14,39 @@ import { CreateTransportModal } from "@/components/transports/CreateTransportMod
 import { ActivityRow } from "@/components/activities/ActivityRow";
 import { ActivityDetail } from "@/components/activities/ActivityDetail";
 import { CreateActivityModal } from "@/components/activities/CreateActivityModal";
+import { AccommodationRow } from "@/components/accommodations/AccommodationRow";
+import { AccommodationDetail } from "@/components/accommodations/AccommodationDetail";
+import { CreateAccommodationModal } from "@/components/accommodations/CreateAccommodationModal";
+import { DetailHeader } from "@/components/ui/detail-header";
+import { SheetSection, SheetEmpty } from "@/components/ui/sheet-section";
+import { Badge } from "@/components/ui/badge";
 import type {
   VisibleCity,
   TripMemberLite,
   VisibleTransport,
   VisibleActivity,
+  VisibleAccommodation,
 } from "@/lib/trip";
 import type { Actor } from "@/lib/permissions";
 
 const MapCanvas = dynamic(() => import("@/components/map/MapCanvas"), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 bg-zinc-200" />,
+  loading: () => <div className="absolute inset-0 bg-[var(--surface-strong)]" />,
 });
 
 type Selection =
   | { kind: "none" }
   | { kind: "city"; cityId: string }
   | { kind: "transport"; transportId: string; fromCityId: string | null }
-  | { kind: "activity"; activityId: string; cityId: string };
+  | { kind: "activity"; activityId: string; cityId: string }
+  | { kind: "accommodation"; accommodationId: string; cityId: string };
 
 type Props = {
   trip: { id: string; name: string };
   cities: VisibleCity[];
   transports: VisibleTransport[];
   activities: VisibleActivity[];
+  accommodations: VisibleAccommodation[];
   user: {
     id: string;
     name?: string | null;
@@ -53,6 +62,7 @@ export function AppShell({
   cities,
   transports,
   activities,
+  accommodations,
   user,
   isTripMember,
   otherTripMembers,
@@ -63,6 +73,8 @@ export function AppShell({
     { city: VisibleCity; side: "from" | "to" } | null
   >(null);
   const [createActivityFor, setCreateActivityFor] = useState<VisibleCity | null>(null);
+  const [createAccommodationFor, setCreateAccommodationFor] =
+    useState<VisibleCity | null>(null);
 
   const actor: Actor = {
     userId: user.id,
@@ -70,15 +82,17 @@ export function AppShell({
     isTripMember,
   };
 
-  // Derivar la city que el mapa muestra (si estamos en city/transport/activity).
+  // Derivar la city que el mapa debe centrar.
   const mapSelectedCityId =
     selection.kind === "city"
       ? selection.cityId
       : selection.kind === "activity"
         ? selection.cityId
-        : selection.kind === "transport"
-          ? selection.fromCityId
-          : null;
+        : selection.kind === "accommodation"
+          ? selection.cityId
+          : selection.kind === "transport"
+            ? selection.fromCityId
+            : null;
 
   const selectedCity =
     selection.kind === "city"
@@ -91,6 +105,10 @@ export function AppShell({
   const selectedActivity =
     selection.kind === "activity"
       ? activities.find((a) => a.id === selection.activityId) ?? null
+      : null;
+  const selectedAccommodation =
+    selection.kind === "accommodation"
+      ? accommodations.find((a) => a.id === selection.accommodationId) ?? null
       : null;
 
   function handleSelectCity(id: string) {
@@ -108,35 +126,69 @@ export function AppShell({
     if (sheetState === "peek") setSheetState("half");
   }
 
-  function backToCity() {
+  function handleSelectAccommodation(accommodationId: string, cityId: string) {
+    setSelection({ kind: "accommodation", accommodationId, cityId });
+    if (sheetState === "peek") setSheetState("half");
+  }
+
+  /**
+   * Único handler de "volver": sube exactamente un nivel en la jerarquía
+   * home → city → item.
+   */
+  function handleBack() {
     if (selection.kind === "transport") {
       if (selection.fromCityId) {
         setSelection({ kind: "city", cityId: selection.fromCityId });
         return;
       }
+      setSelection({ kind: "none" });
+      return;
     }
     if (selection.kind === "activity") {
       setSelection({ kind: "city", cityId: selection.cityId });
       return;
     }
-    setSelection({ kind: "none" });
-  }
-
-  function clearSelection() {
-    setSelection({ kind: "none" });
+    if (selection.kind === "accommodation") {
+      setSelection({ kind: "city", cityId: selection.cityId });
+      return;
+    }
+    if (selection.kind === "city") {
+      setSelection({ kind: "none" });
+      return;
+    }
   }
 
   return (
     <div className="fixed inset-0 overflow-hidden">
       <MapCanvas
         cities={cities}
+        activities={activities}
+        accommodations={accommodations}
         selectedCityId={mapSelectedCityId}
+        selectedActivityId={
+          selection.kind === "activity" ? selection.activityId : null
+        }
+        selectedAccommodationId={
+          selection.kind === "accommodation" ? selection.accommodationId : null
+        }
         onSelectCity={handleSelectCity}
+        onSelectActivity={handleSelectActivity}
+        onSelectAccommodation={handleSelectAccommodation}
+        onMapBackground={() => {
+          if (selection.kind === "activity") handleBack();
+          else if (selection.kind === "accommodation") handleBack();
+        }}
+        sheetState={sheetState}
       />
 
-      <UserMenu user={user} />
+      <UserMenu
+        user={user}
+        shareableCities={cities
+          .filter((c) => c.visibility === "group" && !c.archivedAt)
+          .map((c) => ({ id: c.id, name: c.name }))}
+      />
 
-      <div className="absolute top-3 left-3 z-30 rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium shadow-md backdrop-blur">
+      <div className="absolute top-3 left-3 z-30 rounded-full border border-[var(--hairline)] bg-white px-3.5 py-1.5 text-[14px] font-semibold text-[var(--ink)] shadow-[var(--shadow-card)]">
         {trip.name}
       </div>
 
@@ -175,25 +227,40 @@ export function AppShell({
         />
       )}
 
+      {createAccommodationFor && (
+        <CreateAccommodationModal
+          open
+          onOpenChange={(o) => !o && setCreateAccommodationFor(null)}
+          city={createAccommodationFor}
+          onCreated={(id) => {
+            handleSelectAccommodation(id, createAccommodationFor.id);
+            setCreateAccommodationFor(null);
+          }}
+        />
+      )}
+
       <BottomSheet state={sheetState} onStateChange={setSheetState}>
         <SheetContent
           state={sheetState}
           cities={cities}
           transports={transports}
           activities={activities}
+          accommodations={accommodations}
           actor={actor}
           selectedCity={selectedCity}
           selectedTransport={selectedTransport}
           selectedActivity={selectedActivity}
+          selectedAccommodation={selectedAccommodation}
           onSelectCity={handleSelectCity}
           onSelectTransport={handleSelectTransport}
           onSelectActivity={handleSelectActivity}
-          onBack={backToCity}
-          onClear={clearSelection}
+          onSelectAccommodation={handleSelectAccommodation}
+          onBack={handleBack}
           onAddTransport={(city, side) =>
             setCreateTransportFor({ city, side })
           }
           onAddActivity={(city) => setCreateActivityFor(city)}
+          onAddAccommodation={(city) => setCreateAccommodationFor(city)}
         />
       </BottomSheet>
     </div>
@@ -201,7 +268,7 @@ export function AppShell({
 }
 
 // =====================================================================
-//  Sheet content (timeline / city detail / item detail)
+//  Sheet content (cities list / city detail / item detail)
 // =====================================================================
 
 type SheetContentProps = {
@@ -209,17 +276,20 @@ type SheetContentProps = {
   cities: VisibleCity[];
   transports: VisibleTransport[];
   activities: VisibleActivity[];
+  accommodations: VisibleAccommodation[];
   actor: Actor;
   selectedCity: VisibleCity | null;
   selectedTransport: VisibleTransport | null;
   selectedActivity: VisibleActivity | null;
+  selectedAccommodation: VisibleAccommodation | null;
   onSelectCity: (id: string) => void;
   onSelectTransport: (id: string, fromCityId: string | null) => void;
   onSelectActivity: (id: string, cityId: string) => void;
+  onSelectAccommodation: (id: string, cityId: string) => void;
   onBack: () => void;
-  onClear: () => void;
   onAddTransport: (city: VisibleCity, side: "from" | "to") => void;
   onAddActivity: (city: VisibleCity) => void;
+  onAddAccommodation: (city: VisibleCity) => void;
 };
 
 function SheetContent(props: SheetContentProps) {
@@ -228,21 +298,24 @@ function SheetContent(props: SheetContentProps) {
     cities,
     transports,
     activities,
+    accommodations,
     actor,
     selectedCity,
     selectedTransport,
     selectedActivity,
+    selectedAccommodation,
     onSelectCity,
     onSelectTransport,
     onSelectActivity,
+    onSelectAccommodation,
     onBack,
-    onClear,
     onAddTransport,
     onAddActivity,
+    onAddAccommodation,
   } = props;
 
-  // Item detail (transport/activity) tiene prioridad sobre city detail.
-  if (selectedTransport && state !== "peek") {
+  // Item detail (transport/activity) — máxima prioridad.
+  if (selectedTransport) {
     const fromCity = selectedTransport.fromCityId
       ? cities.find((c) => c.id === selectedTransport.fromCityId) ?? null
       : null;
@@ -250,38 +323,58 @@ function SheetContent(props: SheetContentProps) {
       ? cities.find((c) => c.id === selectedTransport.toCityId) ?? null
       : null;
     return (
-      <TransportDetail
-        transport={selectedTransport}
-        fromCity={fromCity}
-        toCity={toCity}
-        actor={actor}
-        onBack={onBack}
-        onAfterMutation={onBack}
-      />
+      <div className="px-4">
+        <TransportDetail
+          transport={selectedTransport}
+          fromCity={fromCity}
+          toCity={toCity}
+          actor={actor}
+          onBack={onBack}
+          onAfterMutation={onBack}
+        />
+      </div>
     );
   }
 
-  if (selectedActivity && state !== "peek") {
+  if (selectedActivity) {
     const parent = cities.find((c) => c.id === selectedActivity.cityId);
-    if (!parent) {
-      // Fallback raro: la city desapareció (archivada/eliminada en otra session).
-      return null;
-    }
+    if (!parent) return null;
     return (
-      <ActivityDetail
-        activity={selectedActivity}
-        city={parent}
-        actor={actor}
-        onBack={onBack}
-        onAfterMutation={onBack}
-      />
+      <div className="px-4">
+        <ActivityDetail
+          activity={selectedActivity}
+          city={parent}
+          actor={actor}
+          onBack={onBack}
+          onAfterMutation={onBack}
+        />
+      </div>
     );
   }
 
-  if (selectedCity && state !== "peek") {
+  if (selectedAccommodation) {
+    const parent = cities.find((c) => c.id === selectedAccommodation.cityId);
+    if (!parent) return null;
+    return (
+      <div className="px-4">
+        <AccommodationDetail
+          accommodation={selectedAccommodation}
+          city={parent}
+          actor={actor}
+          onBack={onBack}
+          onAfterMutation={onBack}
+        />
+      </div>
+    );
+  }
+
+  if (selectedCity) {
     const arriving = transports.filter((t) => t.toCityId === selectedCity.id);
     const departing = transports.filter((t) => t.fromCityId === selectedCity.id);
     const cityActivities = activities.filter((a) => a.cityId === selectedCity.id);
+    const cityAccommodations = accommodations.filter(
+      (a) => a.cityId === selectedCity.id
+    );
     return (
       <CityDetail
         city={selectedCity}
@@ -289,37 +382,36 @@ function SheetContent(props: SheetContentProps) {
         arrivingTransports={arriving}
         departingTransports={departing}
         activities={cityActivities}
-        onBack={onClear}
+        accommodations={cityAccommodations}
+        onBack={onBack}
         onSelectTransport={(id) => onSelectTransport(id, selectedCity.id)}
         onSelectActivity={(id) => onSelectActivity(id, selectedCity.id)}
+        onSelectAccommodation={(id) => onSelectAccommodation(id, selectedCity.id)}
         onAddTransport={(side) => onAddTransport(selectedCity, side)}
         onAddActivity={() => onAddActivity(selectedCity)}
+        onAddAccommodation={() => onAddAccommodation(selectedCity)}
       />
     );
   }
 
+  // Home: lista vertical plana de ciudades.
   return (
-    <div className="space-y-4 pt-1">
-      <Timeline
-        cities={cities}
-        selectedCityId={selectedCity?.id ?? null}
-        onSelectCity={onSelectCity}
-        grouped={state !== "peek"}
-        reorderable={actor.role === "seed" && state !== "peek"}
-      />
-      {state === "full" && (
-        <div className="px-4 pt-2 text-xs text-zinc-500">
-          {actor.isTripMember
-            ? "Tocá una ciudad para ver el detalle, o usá el botón + para agregar una nueva."
-            : "Estás viendo el viaje en modo lectura. Pedile al organizador que te invite al trip para crear o editar."}
-        </div>
-      )}
-    </div>
+    <CitiesList
+      cities={cities}
+      onSelectCity={onSelectCity}
+      intro={
+        state === "full"
+          ? actor.isTripMember
+            ? "Tocá una ciudad para ver el detalle. Usá el botón + para agregar una nueva."
+            : "Estás viendo el viaje en modo lectura."
+          : undefined
+      }
+    />
   );
 }
 
 // =====================================================================
-//  City detail (con secciones de transports, activities y archivados)
+//  City detail (transports + activities + archivado)
 // =====================================================================
 
 function CityDetail({
@@ -328,64 +420,76 @@ function CityDetail({
   arrivingTransports,
   departingTransports,
   activities,
+  accommodations,
   onBack,
   onSelectTransport,
   onSelectActivity,
+  onSelectAccommodation,
   onAddTransport,
   onAddActivity,
+  onAddAccommodation,
 }: {
   city: VisibleCity;
   actor: Actor;
   arrivingTransports: VisibleTransport[];
   departingTransports: VisibleTransport[];
   activities: VisibleActivity[];
+  accommodations: VisibleAccommodation[];
   onBack: () => void;
   onSelectTransport: (id: string) => void;
   onSelectActivity: (id: string) => void;
+  onSelectAccommodation: (id: string) => void;
   onAddTransport: (side: "from" | "to") => void;
   onAddActivity: () => void;
+  onAddAccommodation: () => void;
 }) {
   const arrivingActive = arrivingTransports.filter((t) => !t.archivedAt);
   const arrivingArchived = arrivingTransports.filter((t) => t.archivedAt);
+  const accommodationsActive = accommodations.filter((a) => !a.archivedAt);
+  const accommodationsArchived = accommodations.filter((a) => a.archivedAt);
   const activitiesActive = activities.filter((a) => !a.archivedAt);
   const activitiesArchived = activities.filter((a) => a.archivedAt);
   const departingActive = departingTransports.filter((t) => !t.archivedAt);
   const departingArchived = departingTransports.filter((t) => t.archivedAt);
 
   const archivedCount =
-    arrivingArchived.length + activitiesArchived.length + departingArchived.length;
+    arrivingArchived.length +
+    accommodationsArchived.length +
+    activitiesArchived.length +
+    departingArchived.length;
 
   const canAdd = actor.isTripMember;
 
   return (
-    <div className="px-4 space-y-5">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-full border border-zinc-200 px-2.5 py-1 text-sm hover:bg-zinc-50"
-          aria-label="Volver al timeline"
-        >
-          ←
-        </button>
-        <h2 className="text-lg font-semibold truncate">{city.name}</h2>
-        {city.visibility === "group" && (
-          <span className="text-[10px] uppercase tracking-wider text-zinc-500 border border-dashed border-zinc-400 rounded px-1.5 py-0.5">
-            grupo
-          </span>
-        )}
-        {city.archivedAt && (
-          <span className="text-[10px] uppercase tracking-wider text-amber-700 border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50">
-            archivada
-          </span>
-        )}
-      </div>
+    <div className="px-4 space-y-6">
+      <DetailHeader
+        onBack={onBack}
+        title={city.name}
+        meta={
+          <>
+            {city.visibility === "group" && (
+              <Badge
+                variant="outline"
+                className="border-dashed text-[10px] uppercase tracking-wider"
+              >
+                privada
+              </Badge>
+            )}
+            {city.archivedAt && (
+              <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                archivada
+              </Badge>
+            )}
+          </>
+        }
+        actions={
+          <CityActions actor={actor} city={city} onAfterMutation={onBack} />
+        }
+      />
 
-      <CityActions actor={actor} city={city} onAfterMutation={onBack} />
-
-      <Section title="Cómo llegás">
+      <SheetSection title="Cómo llegás">
         {arrivingActive.length === 0 ? (
-          <Empty>Todavía no hay transportes hacia esta ciudad.</Empty>
+          <SheetEmpty>Todavía no hay transportes hacia esta ciudad.</SheetEmpty>
         ) : (
           <ul className="space-y-2">
             {arrivingActive.map((t) => (
@@ -400,11 +504,33 @@ function CityDetail({
             Agregar transporte hacia aquí
           </AddInlineButton>
         )}
-      </Section>
+      </SheetSection>
 
-      <Section title="Qué hacer">
+      <SheetSection title="Dónde me alojo">
+        {accommodationsActive.length === 0 ? (
+          <SheetEmpty>Todavía no hay alojamientos cargados.</SheetEmpty>
+        ) : (
+          <ul className="space-y-2">
+            {accommodationsActive.map((a) => (
+              <li key={a.id}>
+                <AccommodationRow
+                  accommodation={a}
+                  onClick={() => onSelectAccommodation(a.id)}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+        {canAdd && (
+          <AddInlineButton onClick={onAddAccommodation}>
+            Agregar alojamiento
+          </AddInlineButton>
+        )}
+      </SheetSection>
+
+      <SheetSection title="Qué hacer">
         {activitiesActive.length === 0 ? (
-          <Empty>Todavía no hay actividades cargadas.</Empty>
+          <SheetEmpty>Todavía no hay actividades cargadas.</SheetEmpty>
         ) : (
           <ul className="space-y-2">
             {activitiesActive.map((a) => (
@@ -419,11 +545,11 @@ function CityDetail({
             Agregar actividad
           </AddInlineButton>
         )}
-      </Section>
+      </SheetSection>
 
-      <Section title="Cómo te vas">
+      <SheetSection title="Cómo te vas">
         {departingActive.length === 0 ? (
-          <Empty>Todavía no hay transportes desde esta ciudad.</Empty>
+          <SheetEmpty>Todavía no hay transportes desde esta ciudad.</SheetEmpty>
         ) : (
           <ul className="space-y-2">
             {departingActive.map((t) => (
@@ -438,17 +564,17 @@ function CityDetail({
             Agregar transporte desde aquí
           </AddInlineButton>
         )}
-      </Section>
+      </SheetSection>
 
       {archivedCount > 0 && (
-        <details className="rounded-lg border border-zinc-200 bg-zinc-50/50 px-3 py-2">
-          <summary className="cursor-pointer text-sm font-medium text-zinc-700">
+        <details className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-soft)]/60 px-3.5 py-2.5">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--ink)]">
             Archivado ({archivedCount})
           </summary>
           <div className="mt-3 space-y-3">
             {arrivingArchived.length > 0 && (
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">
+                <p className="text-[11px] uppercase tracking-wider text-[var(--muted-foreground)] mb-1">
                   Cómo llegás
                 </p>
                 <ul className="space-y-2">
@@ -464,9 +590,27 @@ function CityDetail({
                 </ul>
               </div>
             )}
+            {accommodationsArchived.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-[var(--muted-foreground)] mb-1">
+                  Dónde me alojo
+                </p>
+                <ul className="space-y-2">
+                  {accommodationsArchived.map((a) => (
+                    <li key={a.id}>
+                      <AccommodationRow
+                        accommodation={a}
+                        archived
+                        onClick={() => onSelectAccommodation(a.id)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {activitiesArchived.length > 0 && (
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">
+                <p className="text-[11px] uppercase tracking-wider text-[var(--muted-foreground)] mb-1">
                   Qué hacer
                 </p>
                 <ul className="space-y-2">
@@ -484,7 +628,7 @@ function CityDetail({
             )}
             {departingArchived.length > 0 && (
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">
+                <p className="text-[11px] uppercase tracking-wider text-[var(--muted-foreground)] mb-1">
                   Cómo te vas
                 </p>
                 <ul className="space-y-2">
@@ -507,23 +651,6 @@ function CityDetail({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2">
-      <h3 className="text-sm font-medium text-zinc-700">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/50 px-3 py-4 text-sm text-zinc-500">
-      {children}
-    </div>
-  );
-}
-
 function AddInlineButton({
   onClick,
   children,
@@ -535,7 +662,7 @@ function AddInlineButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900"
+      className="flex items-center gap-1.5 text-sm font-medium text-[var(--ink)] underline underline-offset-4 decoration-[var(--hairline)] hover:decoration-[var(--ink)]"
     >
       <Plus className="h-4 w-4" />
       {children}

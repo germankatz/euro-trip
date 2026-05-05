@@ -1,11 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import { hash } from "bcryptjs";
+import { hash, compare } from "bcryptjs";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { AuthError } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { signIn, signOut } from "@/auth";
+import { auth, signIn, signOut } from "@/auth";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -106,4 +107,69 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/login" });
+}
+
+const profileSchema = z.object({
+  name: z.string().min(1).max(80),
+});
+
+export async function updateProfileAction(formData: FormData): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sin sesión." };
+
+  const parsed = profileSchema.safeParse({ name: formData.get("name") });
+  if (!parsed.success) {
+    return { ok: false, error: "Nombre inválido." };
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { name: parsed.data.name.trim() },
+  });
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(8).max(200),
+    confirmPassword: z.string().min(1),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "Las contraseñas no coinciden.",
+    path: ["confirmPassword"],
+  });
+
+export async function changePasswordAction(formData: FormData): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "Sin sesión." };
+
+  const parsed = passwordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]?.message ?? "Datos inválidos.";
+    return { ok: false, error: first };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { passwordHash: true },
+  });
+  if (!user) return { ok: false, error: "Usuario no encontrado." };
+
+  const matches = await compare(parsed.data.currentPassword, user.passwordHash);
+  if (!matches) return { ok: false, error: "Contraseña actual incorrecta." };
+
+  const newHash = await hash(parsed.data.newPassword, 12);
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { passwordHash: newHash },
+  });
+
+  return { ok: true };
 }

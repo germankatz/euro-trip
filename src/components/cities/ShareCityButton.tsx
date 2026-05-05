@@ -41,19 +41,35 @@ export function ShareCityButton({ city }: Props) {
   );
 }
 
-function ShareDialog({
+export function ShareDialog({
   city,
   onClose,
 }: {
   city: { id: string; name: string };
   onClose: () => void;
 }) {
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Compartir {city.name}</DialogTitle>
+          <DialogDescription>
+            Cualquiera con el link puede sumarse a esta ciudad.
+          </DialogDescription>
+        </DialogHeader>
+        <ShareInner cityId={city.id} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function ShareInner({ cityId }: { cityId: string }) {
   const [items, setItems] = useState<CityInvitationListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, startCreate] = useTransition();
 
   async function refresh() {
-    const result = await listCityInvitationsAction(city.id);
+    const result = await listCityInvitationsAction(cityId);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -64,14 +80,13 @@ function ShareDialog({
 
   useEffect(() => {
     refresh();
-    // city.id es estable mientras el dialog está abierto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city.id]);
+  }, [cityId]);
 
   function handleCreate() {
     setError(null);
     startCreate(async () => {
-      const result = await createCityInvitationAction(city.id);
+      const result = await createCityInvitationAction(cityId);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -81,50 +96,39 @@ function ShareDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Compartir {city.name}</DialogTitle>
-          <DialogDescription>
-            Cualquiera con el link puede sumarse a esta ciudad.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="space-y-3">
+      <Button
+        type="button"
+        onClick={handleCreate}
+        disabled={creating}
+        className="w-full"
+      >
+        {creating ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Plus className="h-4 w-4" />
+        )}
+        Generar nuevo link
+      </Button>
 
-        <div className="space-y-3">
-          <Button
-            type="button"
-            onClick={handleCreate}
-            disabled={creating}
-            className="w-full"
-          >
-            {creating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-            Generar nuevo link
-          </Button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          {items === null ? (
-            <p className="text-sm text-zinc-500">Cargando…</p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              Todavía no hay links generados.
-            </p>
-          ) : (
-            <ul className="divide-y rounded-lg border border-zinc-200">
-              {items.map((it) => (
-                <li key={it.token} className="p-3">
-                  <InvitationRow item={it} onRevoked={refresh} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+      {items === null ? (
+        <p className="text-sm text-zinc-500">Cargando…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-zinc-500">
+          Todavía no hay links generados.
+        </p>
+      ) : (
+        <ul className="divide-y rounded-lg border border-zinc-200">
+          {items.map((it) => (
+            <li key={it.token} className="p-3">
+              <InvitationRow item={it} onRevoked={refresh} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
