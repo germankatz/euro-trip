@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl libc6-compat
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # ---------- Stage 2: builder ----------
 # Generate the Prisma client and build the Next.js app (standalone output).
