@@ -443,6 +443,14 @@ function renderActivityMarkers(
     const el = document.createElement("button");
     el.type = "button";
     el.title = activity.title;
+    // position/will-change como inline styles: sobreviven a reemplazos de
+    // className (applyActivityMarkerState usa el.className = "..."), a
+    // diferencia de la clase mapboxgl-marker que Mapbox agrega una sola vez
+    // en el constructor pero que un reemplazo de className elimina.
+    el.style.position = "absolute";
+    el.style.top = "0";
+    el.style.left = "0";
+    el.style.willChange = "transform";
     el.innerHTML =
       '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>';
     el.addEventListener("mousedown", (e) => e.stopPropagation());
@@ -490,6 +498,10 @@ function renderAccommodationMarkers(
     const el = document.createElement("button");
     el.type = "button";
     el.title = accommodation.title;
+    el.style.position = "absolute";
+    el.style.top = "0";
+    el.style.left = "0";
+    el.style.willChange = "transform";
     el.innerHTML =
       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>';
     el.addEventListener("mousedown", (e) => e.stopPropagation());
