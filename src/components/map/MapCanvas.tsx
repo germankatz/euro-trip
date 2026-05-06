@@ -161,7 +161,9 @@ export function MapCanvas({
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
     map.on("error", (e) => {
-      console.error("[MapCanvas] mapbox error:", e.error?.message ?? e);
+      const msg = e.error?.message;
+      if (!msg) return; // empty-string = tile abort / internal worker noise
+      console.error("[MapCanvas] mapbox error:", msg);
     });
     // Click en el lienzo (no en markers — esos son HTML aparte y stop-propagan
     // sus propios clicks, así que mapbox no los recibe acá).
