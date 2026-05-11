@@ -121,10 +121,12 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
     setStripPos(null);
   }
 
-  function startLongPress() {
+  function startLongPress(e?: React.TouchEvent | React.MouseEvent) {
+    if (e && "touches" in e) e.preventDefault();
     if (!canReact) return;
     longPressTimer.current = setTimeout(() => {
       longPressActivated.current = true;
+      navigator.vibrate?.(40);
       openPicker();
     }, 500);
   }
@@ -154,9 +156,10 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
     <div
       ref={cardRef}
       className={cn(
-        "relative rounded-2xl border border-[var(--hairline)] bg-white transition-shadow hover:shadow-[var(--shadow-card)]",
+        "relative rounded-2xl border border-[var(--hairline)] bg-white transition-shadow hover:shadow-[var(--shadow-card)] select-none",
         archived && "opacity-60",
       )}
+      style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
     >
       {/* Main click + long-press */}
       <button
@@ -165,7 +168,7 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
         onMouseDown={startLongPress}
         onMouseUp={cancelLongPress}
         onMouseLeave={cancelLongPress}
-        onTouchStart={startLongPress}
+        onTouchStart={(e) => startLongPress(e)}
         onTouchEnd={cancelLongPress}
         onTouchMove={cancelLongPress}
         onContextMenu={(e) => e.preventDefault()}
