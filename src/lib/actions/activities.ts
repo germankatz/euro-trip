@@ -199,3 +199,41 @@ export async function deleteActivityAction(
   revalidatePath("/");
   return { ok: true, data: undefined };
 }
+
+const ALLOWED_EMOJIS = new Set([
+  "❤️","😍","🤩","😂","😮","😢","😡","👍","👎","🔥","✅","❌","💯","🎉","🙌","💪","🙈","💀","🤔","👀","🍯",
+]);
+
+export async function toggleActivityReactionAction(
+  activityId: string,
+  emoji: string
+): Promise<ActionResult> {
+  if (!ALLOWED_EMOJIS.has(emoji)) {
+    return { ok: false, error: "Emoji no permitido." };
+  }
+  const actor = await getActor();
+  if (!actor) return { ok: false, error: "Sin sesión." };
+  if (!actor.isTripMember) return { ok: false, error: "Sin permisos." };
+
+  const existing = await prisma.activityReaction.findUnique({
+    where: {
+      activityId_userId_emoji: {
+        activityId,
+        userId: actor.userId,
+        emoji,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.activityReaction.delete({ where: { id: existing.id } });
+  } else {
+    await prisma.activityReaction.create({
+      data: { activityId, userId: actor.userId, emoji },
+    });
+  }
+
+  revalidatePath("/");
+  return { ok: true, data: undefined };
+}

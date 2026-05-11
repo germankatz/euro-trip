@@ -535,7 +535,7 @@ function CityDetail({
           <ul className="space-y-2">
             {activitiesActive.map((a) => (
               <li key={a.id}>
-                <ActivityRow activity={a} onClick={() => onSelectActivity(a.id)} />
+                <ActivityRow activity={a} actor={actor} onClick={() => onSelectActivity(a.id)} />
               </li>
             ))}
           </ul>
@@ -618,6 +618,7 @@ function CityDetail({
                     <li key={a.id}>
                       <ActivityRow
                         activity={a}
+                        actor={actor}
                         archived
                         onClick={() => onSelectActivity(a.id)}
                       />

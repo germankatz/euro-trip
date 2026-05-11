@@ -43,6 +43,7 @@ model User {
   invitationsSent     Invitation[] @relation("InvitedBy")
   invitationsAccepted Invitation[] @relation("AcceptedBy")
   invitationAcceptances InvitationAcceptance[]
+  activityReactions   ActivityReaction[]
 }
 
 // =====================================================================
@@ -216,8 +217,23 @@ model Activity {
   city       City  @relation(fields: [cityId], references: [id], onDelete: Cascade)
   createdBy  User  @relation("ActivityCreatedBy", fields: [createdById], references: [id])
   archivedBy User? @relation("ActivityArchivedBy", fields: [archivedById], references: [id])
+  reactions  ActivityReaction[]
 
   @@index([cityId, archivedAt])
+}
+
+model ActivityReaction {
+  id         String   @id @default(cuid())
+  activityId String
+  userId     String
+  emoji      String
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, userId, emoji])
+  @@index([activityId])
 }
 
 // =====================================================================

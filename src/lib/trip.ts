@@ -143,6 +143,13 @@ export type VisibleTransport = Pick<
   | "archivedAt"
 >;
 
+export type ActivityReactionLite = {
+  id: string;
+  emoji: string;
+  userId: string;
+  userName: string;
+};
+
 export type VisibleActivity = Pick<
   ActivityModel,
   | "id"
@@ -156,7 +163,9 @@ export type VisibleActivity = Pick<
   | "createdById"
   | "createdAt"
   | "archivedAt"
->;
+> & {
+  reactions: ActivityReactionLite[];
+};
 
 export type VisibleAccommodation = Pick<
   AccommodationModel,
@@ -208,6 +217,14 @@ const activitySelect = {
   createdById: true,
   createdAt: true,
   archivedAt: true,
+  reactions: {
+    select: {
+      id: true,
+      emoji: true,
+      userId: true,
+      user: { select: { name: true } },
+    },
+  },
 } as const;
 
 const accommodationSelect = {
@@ -290,23 +307,36 @@ export async function getVisibleTransports(opts: {
  * en el siguiente render ya están guardadas. El timeout corto evita que
  * un URL roto bloquee el SSR.
  */
+type RawActivityRow = Omit<VisibleActivity, "reactions"> & {
+  reactions: { id: string; emoji: string; userId: string; user: { name: string } }[];
+};
+
+function normalizeActivity(r: RawActivityRow): VisibleActivity {
+  return {
+    ...r,
+    reactions: (r.reactions ?? []).flatMap(({ id, emoji, userId, user }) =>
+      user ? [{ id, emoji, userId, userName: user.name }] : [],
+    ),
+  };
+}
+
 export async function getVisibleActivities(opts: {
   visibleCityIds: string[];
   includeArchived?: boolean;
 }): Promise<VisibleActivity[]> {
-  const rows = await prisma.activity.findMany({
+  const rows = (await prisma.activity.findMany({
     where: {
       cityId: { in: opts.visibleCityIds },
       ...(opts.includeArchived ? {} : { archivedAt: null }),
     },
     orderBy: { createdAt: "asc" },
     select: activitySelect,
-  });
+  })) as RawActivityRow[];
 
   const pendingBackfill = rows.filter(
     (r) => r.mapsUrl && (r.lat == null || r.lng == null),
   );
-  if (pendingBackfill.length === 0) return rows;
+  if (pendingBackfill.length === 0) return rows.map(normalizeActivity);
 
   const { resolveCoordsFromMapsUrl } = await import("@/lib/mapsUrl");
   const resolved = await Promise.allSettled(
@@ -336,11 +366,11 @@ export async function getVisibleActivities(opts: {
     const byId = new Map(updates.map((u) => [u.id, u.coords!]));
     return rows.map((r) => {
       const c = byId.get(r.id);
-      return c ? { ...r, lat: c.lat, lng: c.lng } : r;
+      return normalizeActivity(c ? { ...r, lat: c.lat, lng: c.lng } : r);
     });
   }
 
-  return rows;
+  return rows.map(normalizeActivity);
 }
 
 /**

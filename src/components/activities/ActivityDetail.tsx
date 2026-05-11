@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Badge } from "@/components/ui/badge";
 import { DetailHeader } from "@/components/ui/detail-header";
 import { ActivityActions } from "@/components/activities/ActivityActions";
+import { ActivityReactions } from "@/components/activities/ActivityReactions";
 import { ImageGallery } from "@/components/forms/ImageGallery";
 import type { Actor } from "@/lib/permissions";
 import type { VisibleActivity, VisibleCity } from "@/lib/trip";
@@ -81,6 +82,16 @@ export function ActivityDetail({
           </div>
         </section>
       )}
+
+      <section className="space-y-1.5">
+        <h3 className="text-[15px] font-semibold text-[var(--ink)]">Reacciones</h3>
+        <ActivityReactions
+          activityId={activity.id}
+          reactions={activity.reactions}
+          currentUserId={actor.userId}
+          isMember={actor.isTripMember}
+        />
+      </section>
 
       <p className="border-t border-[var(--hairline-soft)] pt-3 text-xs text-[var(--muted-foreground)]">
         Creada: {dateFormatter.format(new Date(activity.createdAt))}
