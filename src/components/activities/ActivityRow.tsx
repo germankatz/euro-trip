@@ -55,7 +55,7 @@ function EmojiStrip({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.88, y: 6 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="fixed z-[50] flex overflow-x-auto gap-0.5 rounded-2xl border border-[var(--hairline)] bg-white p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.12)] [&::-webkit-scrollbar]:hidden"
+        className="fixed z-[50] flex overflow-x-auto overflow-y-hidden gap-0.5 rounded-2xl border border-[var(--hairline)] bg-white p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.12)] [&::-webkit-scrollbar]:hidden"
         style={{
           top: pos.top,
           left: pos.left,
