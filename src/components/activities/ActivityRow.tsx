@@ -49,7 +49,12 @@ function EmojiStrip({
 }) {
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[45]" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-[45]"
+        onClick={onClose}
+        onTouchMove={(e) => e.preventDefault()}
+        style={{ touchAction: "none" }}
+      />
       <motion.div
         initial={{ opacity: 0, scale: 0.88, y: 6 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
