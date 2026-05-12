@@ -42,15 +42,18 @@ function EmojiStrip({
   pos,
   onSelect,
   onClose,
+  containerRef,
 }: {
   pos: StripPos;
   onSelect: (e: string) => void;
   onClose: () => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return createPortal(
     <>
       <div className="fixed inset-0 z-[45]" onClick={onClose} />
       <motion.div
+        ref={containerRef}
         initial={{ opacity: 0, scale: 0.88, y: 6 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.88, y: 6 }}
@@ -93,6 +96,7 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
   const [stripPos, setStripPos] = useState<StripPos | null>(null);
   const [isPending, startTransition] = useTransition();
   const cardRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const longPressActivated = useRef(false);
 
@@ -101,9 +105,14 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
   const groups = groupReactions(activity.reactions ?? [], userId);
   const canReact = actor?.isTripMember ?? false;
 
+  // Bloquea scroll del fondo mientras el picker está abierto,
+  // pero permite el scroll horizontal dentro del strip.
   useEffect(() => {
     if (!stripPos) return;
-    const prevent = (e: TouchEvent) => e.preventDefault();
+    const prevent = (e: TouchEvent) => {
+      if (stripRef.current?.contains(e.target as Node)) return;
+      e.preventDefault();
+    };
     document.addEventListener("touchmove", prevent, { passive: false });
     return () => document.removeEventListener("touchmove", prevent);
   }, [stripPos]);
@@ -224,7 +233,12 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
       {/* Emoji strip portaleada */}
       <AnimatePresence>
         {stripPos && (
-          <EmojiStrip pos={stripPos} onSelect={toggleReaction} onClose={closePicker} />
+          <EmojiStrip
+            pos={stripPos}
+            onSelect={toggleReaction}
+            onClose={closePicker}
+            containerRef={stripRef}
+          />
         )}
       </AnimatePresence>
 
