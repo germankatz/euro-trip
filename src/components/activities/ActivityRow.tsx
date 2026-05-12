@@ -49,12 +49,7 @@ function EmojiStrip({
 }) {
   return createPortal(
     <>
-      <div
-        className="fixed inset-0 z-[45]"
-        onClick={onClose}
-        onTouchMove={(e) => e.preventDefault()}
-        style={{ touchAction: "none" }}
-      />
+      <div className="fixed inset-0 z-[45]" onClick={onClose} />
       <motion.div
         initial={{ opacity: 0, scale: 0.88, y: 6 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -108,9 +103,9 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
 
   useEffect(() => {
     if (!stripPos) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    const prevent = (e: TouchEvent) => e.preventDefault();
+    document.addEventListener("touchmove", prevent, { passive: false });
+    return () => document.removeEventListener("touchmove", prevent);
   }, [stripPos]);
 
   function computePos(): StripPos | null {
