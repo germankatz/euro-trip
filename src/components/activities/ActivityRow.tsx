@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin } from "lucide-react";
@@ -100,6 +100,13 @@ export function ActivityRow({ activity, actor, archived, onClick }: Props) {
   const preview = firstLine(activity.notesMd);
   const groups = groupReactions(activity.reactions ?? [], userId);
   const canReact = actor?.isTripMember ?? false;
+
+  useEffect(() => {
+    if (!stripPos) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [stripPos]);
 
   function computePos(): StripPos | null {
     if (!cardRef.current) return null;
