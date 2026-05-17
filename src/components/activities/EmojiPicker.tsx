@@ -36,7 +36,7 @@ export function EmojiPicker({ triggerRect, onSelect, onClose }: Props) {
         initial={{ opacity: 0, scale: 0.88, y: 6 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="fixed z-[50] grid grid-cols-5 gap-0.5 rounded-xl border border-[var(--hairline)] bg-white p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.12)] overflow-y-auto"
+        className="overflow-y-hidden fixed z-[50] grid grid-cols-5 gap-0.5 rounded-xl border border-[var(--hairline)] bg-white p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.12)] overflow-y-auto"
         style={{ top, left, width: PICKER_W, maxHeight: PICKER_H }}
       >
         {EMOJI_OPTIONS.map((e) => (

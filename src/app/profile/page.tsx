@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { ProfileForm } from "./ProfileForm";
+import { ExportTripButton } from "./ExportTripButton";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -29,6 +30,12 @@ export default async function ProfilePage() {
           defaultName={session.user.name ?? ""}
           email={session.user.email ?? ""}
         />
+        <div className="pt-2 border-t border-zinc-100">
+          <p className="text-sm text-[var(--muted-foreground)] mb-3">
+            Exportar el viaje completo como documento.
+          </p>
+          <ExportTripButton />
+        </div>
       </div>
     </main>
   );

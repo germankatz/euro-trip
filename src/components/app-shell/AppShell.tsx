@@ -398,6 +398,7 @@ function SheetContent(props: SheetContentProps) {
   return (
     <CitiesList
       cities={cities}
+      accommodations={accommodations}
       onSelectCity={onSelectCity}
       intro={
         state === "full"
@@ -413,6 +414,58 @@ function SheetContent(props: SheetContentProps) {
 // =====================================================================
 //  City detail (transports + activities + archivado)
 // =====================================================================
+
+function formatCityDate(date: Date): string {
+  const dayOfWeek = date.toLocaleDateString("es-AR", { weekday: "long" });
+  const day = date.getDate();
+  const month = date.toLocaleDateString("es-AR", { month: "long" });
+  const hh = date.getHours().toString().padStart(2, "0");
+  const mm = date.getMinutes().toString().padStart(2, "0");
+  return `${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)} ${day} de ${month} · ${hh}:${mm}`;
+}
+
+function CityTravelSummary({
+  arrivingTransports,
+  departingTransports,
+}: {
+  arrivingTransports: VisibleTransport[];
+  departingTransports: VisibleTransport[];
+}) {
+  const arrival = arrivingTransports
+    .filter((t) => !t.archivedAt && t.arrivalAt)
+    .sort((a, b) => new Date(a.arrivalAt!).getTime() - new Date(b.arrivalAt!).getTime())[0];
+
+  const departure = departingTransports
+    .filter((t) => !t.archivedAt && t.departureAt)
+    .sort((a, b) => new Date(a.departureAt!).getTime() - new Date(b.departureAt!).getTime())[0];
+
+  if (!arrival && !departure) return null;
+
+  return (
+    <div className="flex flex-col gap-1 rounded-xl bg-[var(--surface-soft)] px-4 py-3 text-[13px]">
+      {arrival && (
+        <div className="flex items-baseline gap-2">
+          <span className="w-14 shrink-0 text-[11px] uppercase tracking-wider text-[var(--muted-foreground)]">
+            Llegada
+          </span>
+          <span className="text-[var(--ink)]">
+            {formatCityDate(new Date(arrival.arrivalAt!))}
+          </span>
+        </div>
+      )}
+      {departure && (
+        <div className="flex items-baseline gap-2">
+          <span className="w-14 shrink-0 text-[11px] uppercase tracking-wider text-[var(--muted-foreground)]">
+            Salida
+          </span>
+          <span className="text-[var(--ink)]">
+            {formatCityDate(new Date(departure.departureAt!))}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CityDetail({
   city,
@@ -485,6 +538,11 @@ function CityDetail({
         actions={
           <CityActions actor={actor} city={city} onAfterMutation={onBack} />
         }
+      />
+
+      <CityTravelSummary
+        arrivingTransports={arrivingTransports}
+        departingTransports={departingTransports}
       />
 
       <SheetSection title="Cómo llegás">
